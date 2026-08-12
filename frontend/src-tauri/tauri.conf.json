@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Bandes",
+  "version": "0.1.0",
+  "identifier": "com.bandes.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:3000",
+    "beforeBuildCommand": "pnpm build:export",
+    "frontendDist": "../out"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Bandes - Control Mining",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "connect-src": "'self' http://127.0.0.1:3001 ws://127.0.0.1:3001",
+        "img-src": "'self' data: blob: http://127.0.0.1:3001 https:",
+        "style-src": "'self' 'unsafe-inline'",
+        "font-src": "'self' data:",
+        "media-src": "'self' https:"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "externalBin": ["binaries/backend-api"],
+    "shortDescription": "Sistema de trazabilidad de fundicion y boveda de oro (LAN)",
+    "longDescription": "Bandes Desktop: trazabilidad de oro, boveda multi-proveedor y lectura de balanza, operando 100% en red local."
+  }
+}

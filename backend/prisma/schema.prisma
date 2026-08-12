@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BarStatus {
+  POR_VALIDAR
+  IN_STOCK
+  PROCESANDO
+  COMPLETADO
+  EXITED
+}
+
+enum PackingStatus {
+  PENDING
+  VALIDATED
+}
+
+enum ProcessStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum ClientRole {
+  PROVEEDOR
+  CLIENTE
+  AMBOS
+}
+
+model Client {
+  id          String      @id @default(uuid())
+  rif         String      @unique
+  name        String
+  contactInfo String?
+  role        ClientRole  @default(AMBOS)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  bars          Bar[]
+  processes     Process[]
+  packings      Packing[]
+  materialExits MaterialExit[]
+}
+
+model Process {
+  id        String        @id @default(uuid())
+  name      String
+  clientId  String
+  isMixed   Boolean       @default(false)
+  status    ProcessStatus @default(OPEN)
+  client    Client        @relation(fields: [clientId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  lots Lot[]
+
+  @@unique([name, clientId])
+}
+
+model Lot {
+  id          String    @id @default(uuid())
+  name        String
+  processId   String
+  process     Process   @relation(fields: [processId], references: [id])
+  operator    String?
+  castingTemp Float?
+  moldCode    String?
+  recovered   Decimal?  @db.Decimal(15, 4)
+  purity      Decimal?  @db.Decimal(7, 4)
+  fineWeight  Decimal?  @db.Decimal(15, 4)
+  recoveryAt  DateTime?
+  photoUrl    String?   @map("photo_url")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  bars         Bar[]
+  exitDetails  ExitDetail[]
+}
+
+model Bar {
+  id          String    @id @default(uuid())
+  barNumber   String
+  spGrossWeight Decimal? @db.Decimal(15, 4)
+  spPurity      Decimal? @db.Decimal(7, 4)
+  grossWeight Decimal   @db.Decimal(15, 4)
+  purity      Decimal   @db.Decimal(7, 4)
+  fineWeight  Decimal   @db.Decimal(15, 4)
+  leyAg        Decimal?  @db.Decimal(7, 4)
+  fineWeightAg Decimal?  @db.Decimal(15, 4)
+  photoUrl     String?   @map("photo_url")
+  status      BarStatus @default(POR_VALIDAR)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  clientId     String
+  client       Client       @relation(fields: [clientId], references: [id])
+  exitDetailId String?
+  exitDetail   ExitDetail?  @relation(fields: [exitDetailId], references: [id])
+  lotId        String?
+  lot          Lot?         @relation(fields: [lotId], references: [id])
+  packingId    String?
+  packing      Packing?     @relation(fields: [packingId], references: [id])
+  exitId       String?
+  exit         MaterialExit? @relation(fields: [exitId], references: [id])
+
+  @@unique([clientId, barNumber])
+}
+
+model Packing {
+  id            String        @id @default(uuid())
+  fileName      String
+  clientId      String
+  packingNumber Int?          @map("packing_number")
+  totalRows     Int
+  created       Int
+  skipped       Int
+  errors        Json?
+  status        PackingStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id])
+  bars   Bar[]
+}
+
+model MaterialExit {
+  id          String   @id @default(uuid())
+  destination String
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  totalWeight Decimal  @db.Decimal(15, 4)
+  createdAt   DateTime @default(now())
+
+  exitDetails ExitDetail[]
+  bars        Bar[]
+}
+
+model ExitDetail {
+  id            String @id @default(uuid())
+  weightAported Decimal @db.Decimal(15, 4)
+
+  exitId   String
+  exit     MaterialExit @relation(fields: [exitId], references: [id])
+
+  lotId String
+  lot   Lot @relation(fields: [lotId], references: [id])
+
+  bars Bar[]
+
+  @@unique([exitId, lotId])
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("ADMIN") // ADMIN | OPERATOR | AUDITOR
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  entityType String // "BAR" | "LOT"
+  entityId   String
+  filename   String
+  mimeType   String   @default("image/jpeg")
+  data       Bytes // foto en la BD central, visible por todos los clientes
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}

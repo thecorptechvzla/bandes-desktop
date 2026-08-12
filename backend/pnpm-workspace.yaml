@@ -1,0 +1,6 @@
+allowBuilds:
+  '@prisma/engines': true
+  '@serialport/bindings-cpp': true
+  esbuild: true
+  prisma: true
+  unrs-resolver: true
