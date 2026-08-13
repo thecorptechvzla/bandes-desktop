@@ -10,6 +10,7 @@
     "build": "prisma generate && nest build",
     "desktop:build": "prisma generate && nest build && node scripts/build-desktop.mjs",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
+    "user:add": "tsx src/scripts/add-user.ts",
     "purity:normalize": "node --loader ts-node/esm src/scripts/normalize-purity.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

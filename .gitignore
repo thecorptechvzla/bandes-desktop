@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+
+# Builds
+dist/
+out/
+.next/
+coverage/
+
+# Entorno y secretos (nunca subir)
+.env
+.env.*
+!.env.example
+*.local
+
+# Artefactos de Tauri (se regeneran en CI)
+frontend/src-tauri/target/
+frontend/src-tauri/binaries/*.exe
+
+# Claves de firma de updates
+.keys/
+*.key
+*.key.pub
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+*.log

@@ -10,7 +10,9 @@ import {
   ArrowLeftRight, FolderUp, LogOut,
   Calendar, History, Menu, X, Loader2, ChevronDown, FileText,
 } from 'lucide-react';
-import { isAuthenticated, logout } from '@/lib/auth';
+import { isAuthenticated, logout, getSession } from '@/lib/auth';
+import { roleLabel } from '@/lib/roles';
+import UpdaterBanner from '@/components/UpdaterBanner';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -393,7 +395,7 @@ export default function RootLayout({
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--hud-bg-deepest)] rounded-xl border border-[var(--hud-border)]">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[var(--hud-bg-deepest)] rounded-xl border border-[var(--hud-border)]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--hud-accent-emerald)] animate-pulse" />
                       <span className="text-[11px] font-mono text-[var(--hud-text-dim)]">{sysTime}</span>
                     </div>
@@ -405,6 +407,16 @@ export default function RootLayout({
                         })}
                       </span>
                     </div>
+                    {hasSession && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--hud-bg-deepest)] rounded-xl border border-[var(--hud-border)]">
+                        <span className="text-[11px] font-mono font-semibold text-[var(--hud-text-primary)]">
+                          {getSession()?.username}
+                        </span>
+                        <span className="text-[10px] font-mono uppercase tracking-wide text-[var(--hud-accent-gold)]">
+                          {roleLabel(getSession()?.role)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </header>
 
@@ -414,6 +426,8 @@ export default function RootLayout({
                     {children}
                   </div>
                 </main>
+
+                <UpdaterBanner />
 
                 {/* Status bar */}
                 <footer className="h-7 shrink-0 flex items-center px-6 bg-[var(--hud-bg-card)]/80 border-t border-[var(--hud-border)]">

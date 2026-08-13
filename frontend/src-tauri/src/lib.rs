@@ -6,6 +6,7 @@ use tauri_plugin_shell::ShellExt;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let sidecar = app.shell().sidecar("backend-api")?;
             let (mut rx, _child) = sidecar

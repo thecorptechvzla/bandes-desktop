@@ -4,37 +4,39 @@ import { PrismaClient } from '@prisma/client';
 import bcryptjs from 'bcryptjs';
 const { hash } = bcryptjs;
 
+const VALID_ROLES = ['SUPERADMIN', 'OWNER', 'ADMIN'];
+
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL requerida');
 
-  const password = process.env.ADMIN_PASSWORD;
+  const username = process.env.USER_USERNAME;
+  const password = process.env.USER_PASSWORD;
+  const role = (process.env.USER_ROLE || 'OWNER').toUpperCase();
+
+  if (!username) throw new Error('USER_USERNAME requerido');
   if (!password || password.length < 6) {
-    throw new Error('ADMIN_PASSWORD requerida (mínimo 6 caracteres)');
+    throw new Error('USER_PASSWORD requerida (mínimo 6 caracteres)');
+  }
+  if (!VALID_ROLES.includes(role)) {
+    throw new Error(`USER_ROLE inválida (${VALID_ROLES.join('|')})`);
   }
 
   const adapter = new PrismaPg({ connectionString: url, max: 2 });
   const prisma = new PrismaClient({ adapter });
 
-  const username = process.env.ADMIN_USERNAME || 'admin';
-  const role = (process.env.ADMIN_ROLE || 'SUPERADMIN').toUpperCase();
-  const VALID_ROLES = ['SUPERADMIN', 'OWNER', 'ADMIN'];
-  if (!VALID_ROLES.includes(role)) {
-    throw new Error(`ADMIN_ROLE inválida (${VALID_ROLES.join('|')})`);
-  }
   const passwordHash = await hash(password, 10);
-
   const user = await prisma.user.upsert({
     where: { username },
     update: { passwordHash, role, active: true },
     create: { username, passwordHash, role },
   });
 
-  console.log(`[seed-admin] Usuario "${user.username}" listo (role=${user.role})`);
+  console.log(`[add-user] Usuario "${user.username}" listo (role=${user.role})`);
   await prisma.$disconnect();
 }
 
 main().catch((err) => {
-  console.error('[seed-admin] Error:', err);
+  console.error('[add-user] Error:', err);
   process.exit(1);
 });

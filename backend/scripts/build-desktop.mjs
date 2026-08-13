@@ -19,8 +19,9 @@ const ROOT = resolve('..'); // bandes-desktop/
 const BUNDLE_DIR = resolve('dist/desktop');
 const TAURI_BIN_DIR = resolve(ROOT, 'frontend/src-tauri/binaries');
 
-// ── 0) Leer backend/.env SOLO en tiempo de compilación (nunca se distribuye) ──
-const env = { ...process.env, ...config({ path: '.env' }).parsed };
+// ── 0) Leer backend/.env SOLO en tiempo de compilación (nunca se distribuye).
+//        Las variables ya presentes en el entorno (ej: secrets de CI) tienen prioridad.
+const env = { ...(config({ path: '.env' }).parsed || {}), ...process.env };
 
 const DATABASE_URL = env.DATABASE_URL;
 if (!DATABASE_URL) {

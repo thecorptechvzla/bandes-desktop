@@ -19,6 +19,7 @@ export async function login(username: string, password: string): Promise<Session
   localStorage.setItem(TOKEN_KEY, data.token);
   const user: SessionUser = { ...data.user, loginAt: new Date().toISOString() };
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem('bandes_user_role', data.user.role);
   return user;
 }
 
@@ -26,6 +27,7 @@ export function logout(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem('bandes_user_role');
 }
 
 export function isAuthenticated(): boolean {
