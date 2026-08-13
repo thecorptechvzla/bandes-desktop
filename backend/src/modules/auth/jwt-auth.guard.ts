@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { verify } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { jwtSecret } from './constants.js';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
 
@@ -34,7 +34,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      request.user = verify(token, jwtSecret()) as unknown as AuthUser;
+      request.user = jwt.verify(token, jwtSecret()) as unknown as AuthUser;
       return true;
     } catch {
       throw new UnauthorizedException('Sesión inválida o expirada');
