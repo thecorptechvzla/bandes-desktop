@@ -89,7 +89,8 @@
     ],
     "outputPath": "dist/desktop",
     "assets": [
-      "node_modules/.pnpm/@serialport+bindings-cpp@13.0.0/node_modules/@serialport/bindings-cpp/prebuilds/**/*.node",
+      "node_modules/.pnpm/**/prebuilds/**/*.node",
+      "node_modules/@serialport/bindings-cpp/prebuilds/**/*.node",
       "node_modules/pdfkit/**/*.afm",
       "node_modules/pdfkit/js/data/**/*"
     ],
