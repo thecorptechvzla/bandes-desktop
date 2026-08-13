@@ -45,7 +45,8 @@
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVCQTZENjMyQjdCQzZFNUMKUldSY2JyeTNNdGFtVzREMlk3Rk1yYkcxZlRXeXN6R09kY2hnTDF3M1Q4Z0UwQkNuVm5jVTBweU0K",
       "endpoints": [
         "http://192.168.88.245:8090/latest.json"
-      ]
+      ],
+      "dangerousInsecureTransportProtocol": true
     }
   }
 }
