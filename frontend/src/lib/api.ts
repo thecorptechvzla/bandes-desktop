@@ -12,7 +12,7 @@ export function getAuthToken(): string | null {
 }
 
 export const api = axios.create({
-  baseURL: SIDECAR_URL,
+  baseURL: `${SIDECAR_URL}/api`,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15_000,
 });
