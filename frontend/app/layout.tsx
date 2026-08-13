@@ -87,7 +87,6 @@ export default function RootLayout({
   const isReporteRoute = pathname.startsWith('/reportes');
   const [manualOpen, setManualOpen] = useState(false);
   const [reportesManualOpen, setReportesManualOpen] = useState(false);
-  const isLoginPage = pathname === '/login';
   const [sysTime, setSysTime] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
@@ -112,8 +111,8 @@ export default function RootLayout({
   useEffect(() => {
     if (!sessionReady) return;
     const authed = isAuthenticated();
-    if (pathname === '/login' && authed) router.replace('/dashboard');
-    if (pathname !== '/login' && !authed) router.replace('/login');
+    if (pathname.startsWith('/login') && authed) router.replace('/dashboard');
+    if (!pathname.startsWith('/login') && !authed) router.replace('/login');
   }, [sessionReady, pathname, router]);
 
   const handleLogout = () => {
@@ -297,7 +296,7 @@ export default function RootLayout({
     );
   }
 
-  if (isLoginPage && !hasSession) {
+  if (!hasSession) {
     return (
       <html lang="es">
         <head>{head}</head>
