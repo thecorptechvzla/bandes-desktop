@@ -186,10 +186,32 @@ Por defecto la balanza se lee de `COM3` (Windows) o `/dev/ttyUSB0` (Linux). Para
 |---|---|---|
 | "No se puede encontrar esta página" al abrir `http://192.168.88.162:8090/` | Caddy sirve archivos, no listado (a menos que se use `--browse`) | Abrir la URL de un archivo concreto; o relanzar Caddy con `--browse` |
 | La app abre pero al entrar dice "Verifique el sidecar y la red" | El sidecar murió (binding nativo sin empaquetar, etc.) | `cd $env:LOCALAPPDATA\Bandes; .\backend-api.exe` y leer el error de consola |
-| `backend-api.exe` crashea con "No native build was found… bindings-cpp" | El addon serialport no se incluyó en el empaquetado (pnpm) | Verificar `package.json → pkg.assets` con el path `.pnpm/@serialport+bindings-cpp@13.0.0/…` y regenerar |
+| `backend-api.exe` crashea con "No native build was found… bindings-cpp" | pkg no incrusta fielmente los prebuilds de `node_modules` con pnpm | Ver sección **7.1** (solución con shim + dlopen) |
 | Error de conexión a PostgreSQL | Firewall, `pg_hba.conf` o subred distinta a `192.168.88.0/24` | Verificar regla `5432` y `RemoteAddress` |
-| La app no avisa de actualizaciones | Falta `latest.json` en `C:\bandes-updates` | Reemplazar el contenido del zip nuevo |
+| La app no avisa de actualizaciones | Falta `latest.json` en `C:\bandes-updates` | Reemplazar el contenido del zip nuevo (el workflow de CI ya genera `latest.json` con `tauri signer sign`) |
 | Sin WebView2 en el cliente | Instalador no lo descargó | Instalar WebView2 Runtime manualmente |
+
+### 7.1 Addon nativo serialport + pkg (el fix definitivo)
+
+El sidecar (`backend-api.exe`) se empaqueta con `@yao-pkg/pkg` sobre el bundle CJS de esbuild.
+El addon nativo de `serialport` (`@serialport/bindings-cpp`) no se incrustaba de forma confiable
+cuando pkg resolvía paquetes dentro de `node_modules` con pnpm (aunque se usara `node-linker=hoisted`
+o globs amplios en `pkg.assets`): en Windows crasheaba con
+`No native build was found for platform=win32 arch=x64 runtime=node abi=127 …`.
+
+La solución aplicada en `backend/scripts/build-desktop.mjs` es **determinista** y no depende del
+mapeo de `node_modules` de pkg:
+
+1. `pnpm` usa `node-linker=hoisted` (`backend/pnpm-workspace.yaml`) → `node_modules/@serialport/bindings-cpp` es un directorio real.
+2. Durante el build se **copia** el prebuild de Windows a `dist/desktop/serialport.node` (junto al bundle).
+3. Se declara como asset de pkg: `dist/desktop/serialport.node` (`backend/package.json → pkg.assets`).
+4. esbuild **inlinea** `@serialport/bindings-cpp` y reemplaza `node-gyp-build` por un shim
+   (`backend/scripts/node-gyp-build-shim.cjs`) que hace `process.dlopen` probando rutas conocidas:
+   `__dirname/serialport.node` → `process.cwd()/serialport.node` → `dir/prebuilds/win32-x64/*.node`.
+
+Para regenerar el sidecar: `cd backend && pnpm desktop:build`.
+Validación: el exe resultante contiene los strings del DLL nativo
+(`node-serialport:OpenBaton`, `node-serialport:ListBaton`, …).
 
 ---
 
@@ -197,5 +219,7 @@ Por defecto la balanza se lee de `COM3` (Windows) o `/dev/ttyUSB0` (Linux). Para
 
 - `.env` nunca se commitea (excluidos por `.gitignore`); solo está el `.env` local del backend.
 - El sidecar se compila con `backend/scripts/build-desktop.mjs` (`pnpm desktop:build`) inyectando `DATABASE_URL` y `JWT_SECRET` en el binario.
+- El addon nativo de serialport se empaqueta con el shim `backend/scripts/node-gyp-build-shim.cjs` + asset `dist/desktop/serialport.node` (ver **7.1**).
 - `frontend/src-tauri/binaries/backend-api-x86_64-pc-windows-msvc.exe` es el sidecar que empaqueta Tauri (`externalBin`).
+- El workflow de CI genera el `latest.json` del updater explícitamente con `tauri signer sign` (`.github/workflows/build-windows.yml`), por lo que el artifact siempre lo incluye.
 - Auto-update LAN: Tauri configura `dangerousInsecureTransportProtocol: true` porque el endpoint local es `http://`; los paquetes van firmados con minisign (no se puede inyectar un update falsificado sin la clave privada).
