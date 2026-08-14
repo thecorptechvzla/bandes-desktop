@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 
 // hola como estas?
+// hola como estas?
+
 
 export default function Home() {
   const router = useRouter();
