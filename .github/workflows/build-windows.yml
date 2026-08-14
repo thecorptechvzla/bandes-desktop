@@ -61,12 +61,40 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
+      - name: Generate latest.json for updater
+        working-directory: frontend
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path C:\artifacts
+          $setup = Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter *.exe |
+            Where-Object { $_.Name -match 'setup' } | Select-Object -First 1
+          if (-not $setup) { throw 'No se encontró el instalador NSIS (setup.exe)' }
+          $sig = (& pnpm tauri signer sign "$($setup.FullName)" 2>&1 | Out-String)
+          $sigLine = ($sig -split "`r?`n" | Where-Object { $_ -match '^[A-Za-z0-9+/=]+$' } | Select-Object -First 1).Trim()
+          if (-not $sigLine) { throw 'No se pudo obtener la firma del instalador' }
+          $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          $json = [ordered]@{
+            version = $version
+            notes = ''
+            pub_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            platforms = @{
+              'windows-x86_64' = @{
+                signature = $sigLine
+                url = "http://192.168.88.162:8090/$($setup.Name)"
+              }
+            }
+          }
+          $json | ConvertTo-Json -Depth 4 | Set-Content -Path C:\artifacts\latest.json -Encoding utf8
+          Write-Output "latest.json generado para v$version"
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
       - name: Collect artifacts
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path c:\artifacts
           Copy-Item frontend/src-tauri/target/release/bundle/nsis/*.exe c:\artifacts\ -ErrorAction SilentlyContinue
-          Get-ChildItem -Path frontend/src-tauri/target/release -Recurse -Filter latest.json | Copy-Item -Destination c:\artifacts\ -ErrorAction SilentlyContinue
           Copy-Item frontend/src-tauri/target/release/bundle/msi/* c:\artifacts\ -ErrorAction SilentlyContinue
           Get-ChildItem c:\artifacts | Select-Object Name, Length
 

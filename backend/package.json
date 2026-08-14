@@ -89,6 +89,7 @@
     ],
     "outputPath": "dist/desktop",
     "assets": [
+      "dist/desktop/serialport.node",
       "node_modules/.pnpm/**/prebuilds/**/*.node",
       "node_modules/@serialport/bindings-cpp/prebuilds/**/*.node",
       "node_modules/pdfkit/**/*.afm",

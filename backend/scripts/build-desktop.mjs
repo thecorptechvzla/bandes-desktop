@@ -8,7 +8,7 @@
  *
  * Uso (desde backend/): pnpm desktop:build
  */
-import { readFileSync, existsSync, mkdirSync, renameSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -51,6 +51,18 @@ const nestOptionalStub = {
   },
 };
 
+const nodeGypBuildShimPlugin = {
+  name: 'node-gyp-build-shim',
+  setup(build) {
+    // node-gyp-build (CJS) se reemplaza por nuestro shim que hace process.dlopen
+    // sobre dist/desktop/serialport.node (ruta determinista embebida por pkg).
+    build.onResolve({ filter: /^node-gyp-build$/ }, () => ({
+      path: resolve('scripts/node-gyp-build-shim.cjs'),
+      namespace: 'file',
+    }));
+  },
+};
+
 await build({
   entryPoints: [resolve('dist/src/main.js')],
   bundle: true,
@@ -58,7 +70,7 @@ await build({
   target: 'node22',
   format: 'cjs', // @yao-pkg/pkg espera CJS
   outfile: resolve(BUNDLE_DIR, 'backend-api.cjs'),
-  plugins: [nestOptionalStub],
+  plugins: [nestOptionalStub, nodeGypBuildShimPlugin],
   define: {
     'process.env.DATABASE_URL': JSON.stringify(DATABASE_URL),
     'process.env.JWT_SECRET': JSON.stringify(JWT_SECRET),
@@ -66,11 +78,25 @@ await build({
     'process.env.PORT': JSON.stringify('3001'),
     'process.env.IS_DESKTOP': JSON.stringify('true'),
   },
-  // Addons nativos y recursos de datos: los empaqueta pkg a través de node_modules
-  external: ['@serialport/bindings-cpp', 'node-gyp-build', 'pdfkit'],
+  // bindings-cpp y node-gyp-build van DENTRO del bundle (el shim los maneja);
+  // pdfkit se mantiene external (sus assets .afm se empaquetan por separado).
+  external: ['pdfkit'],
   logLevel: 'info',
 });
 console.log('[desktop] Bundle CJS generado');
+
+// ── 1.5) Copiar el prebuild nativo de serialport (win32-x64) junto al bundle ──
+// pkg no incrusta de forma confiable los assets dentro de node_modules (pnpm),
+// así que el .node se copia explícitamente a dist/desktop/serialport.node y se
+// declara en pkg.assets; el shim lo carga con process.dlopen.
+const serialportNodeSrc = resolve(
+  'node_modules/@serialport/bindings-cpp/prebuilds/win32-x64/@serialport+bindings-cpp.node',
+);
+if (!existsSync(serialportNodeSrc)) {
+  throw new Error('[desktop] No se encontró el prebuild win32-x64 de serialport');
+}
+copyFileSync(serialportNodeSrc, resolve(BUNDLE_DIR, 'serialport.node'));
+console.log('[desktop] serialport.node copiado junto al bundle');
 
 // ── 2) pkg → .exe Windows ──
 mkdirSync(BUNDLE_DIR, { recursive: true });
