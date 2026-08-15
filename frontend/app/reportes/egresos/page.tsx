@@ -69,13 +69,13 @@ export default function EgresosReportPage() {
     setReportType(t);
   }, []);
 
-  const handleReprint = useCallback((record: EgresoRecord, copyType: CopyType) => {
+  const handleReprint = useCallback(async (record: EgresoRecord, copyType: CopyType) => {
     if (!record.exit) return;
     const destinatario = clients.find((c) => c.id === record.clienteId);
     const destinoClient = destinatario
       ? { rif: destinatario.rif, contactInfo: destinatario.contactInfo }
       : undefined;
-    generateDispatchPDF(convertExitToDispatchResult(record.exit), destinoClient, copyType, appliedReportType === 'detallado');
+    await generateDispatchPDF(convertExitToDispatchResult(record.exit), destinoClient, copyType, appliedReportType === 'detallado');
   }, [clients, appliedReportType]);
 
   const handleGenerate = useCallback(async () => {

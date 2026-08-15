@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { saveFile } from '@/lib/saveFile';
 import autoTable from 'jspdf-autotable';
 import { formatWeight, formatLey } from '@/lib/format';
 
@@ -40,7 +41,7 @@ export interface BovedaReportData {
 
 export type BovedaReportType = 'RESUMEN' | 'DETALLADO';
 
-export function generateBovedaReportPDF(data: BovedaReportData, type: BovedaReportType) {
+export async function generateBovedaReportPDF(data: BovedaReportData, type: BovedaReportType) {
   const doc = new jsPDF({ unit: 'mm', format: 'letter' });
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
@@ -424,5 +425,5 @@ export function generateBovedaReportPDF(data: BovedaReportData, type: BovedaRepo
   doc.text(`Fecha generación: ${new Date().toLocaleString('es-ES')}`, m, y);
 
   const suffix = type === 'RESUMEN' ? 'Resumen' : 'Detallado';
-  doc.save(`Boveda_Oro_${suffix}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  await saveFile(doc.output('blob'), `Boveda_Oro_${suffix}_${new Date().toISOString().slice(0, 10)}.pdf`, [{ name: 'PDF', extensions: ['pdf'] }]);
 }

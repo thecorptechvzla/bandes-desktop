@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { saveFile } from '@/lib/saveFile';
 import autoTable from 'jspdf-autotable';
 import type { SaldoRecord, SaldoDetailedRecord, SaldoReportType } from '@/components/reportes/saldos/types';
 import { formatLey, formatNumber } from '@/lib/format';
@@ -392,7 +393,7 @@ function drawFooter(doc: jsPDF, pageNum: number, totalPages: number, pw: number,
   doc.text(`Pagina ${pageNum} de ${totalPages}`, pw - 10, yText, { align: 'right' });
 }
 
-export function generateSaldosReportPDF(params: GenerateSaldosReportPDFParams) {
+export async function generateSaldosReportPDF(params: GenerateSaldosReportPDFParams) {
   const { reportType, records, detailedRecords } = params;
 
   const pw = 215.9;
@@ -417,5 +418,5 @@ export function generateSaldosReportPDF(params: GenerateSaldosReportPDFParams) {
 
   drawFooter(doc, 1, 1, pw, ph);
 
-  doc.save(`Reporte_Balance_BANDES_${params.reportId.replace('#', '')}.pdf`);
+  await saveFile(doc.output('blob'), `Reporte_Balance_BANDES_${params.reportId.replace('#', '')}.pdf`, [{ name: 'PDF', extensions: ['pdf'] }]);
 }

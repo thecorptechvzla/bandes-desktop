@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { saveFile } from '@/lib/saveFile';
 import type { PackingReportData, ReportType } from '@/components/reportes/packing/types';
 import { formatLey, formatNumber, truncateLey } from '@/lib/format';
 
@@ -401,10 +402,5 @@ export async function generatePackingReportExcel(params: GeneratePackingReportEx
   const blob = new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `Reporte_Packings_BANDES_${reportId.replace('#', '')}.xlsx`;
-  link.click();
-  URL.revokeObjectURL(url);
+  await saveFile(blob, `Reporte_Packings_BANDES_${reportId.replace('#', '')}.xlsx`, [{ name: 'Excel', extensions: ['xlsx'] }]);
 }

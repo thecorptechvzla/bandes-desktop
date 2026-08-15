@@ -92,7 +92,7 @@ export default function SaldosReportPage() {
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      generateSaldosReportPDF({
+      await generateSaldosReportPDF({
         records: filteredRecords,
         detailedRecords: filteredDetailed,
         reportId,

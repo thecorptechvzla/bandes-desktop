@@ -526,8 +526,8 @@ const [selectedLotIds, setSelectedLotIds] = useState<Set<string>>(new Set());
           isOpen
           result={dispatchResult}
           message={message}
-          onPDFCliente={() => generateDispatchPDF(dispatchResult, destinationClient ?? undefined, 'CLIENTE')}
-          onPDFEmpresa={() => generateDispatchPDF(dispatchResult, destinationClient ?? undefined, 'EMPRESA')}
+          onPDFCliente={async () => { await generateDispatchPDF(dispatchResult, destinationClient ?? undefined, 'CLIENTE'); }}
+          onPDFEmpresa={async () => { await generateDispatchPDF(dispatchResult, destinationClient ?? undefined, 'EMPRESA'); }}
           onClose={() => { setDispatchResult(null); setStatus('idle'); }}
         />
       )}

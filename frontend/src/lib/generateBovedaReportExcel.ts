@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { saveFile } from '@/lib/saveFile';
 import { formatWeight, formatNumber } from '@/lib/format';
 import type { BovedaReportData, BovedaReportType } from './generateBovedaReportPDF';
 
@@ -281,10 +282,5 @@ export async function generateBovedaReportExcel(params: GenerateBovedaReportExce
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Inventario_Boeda_${reportType}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
+  await saveFile(blob, `Inventario_Boeda_${reportType}_${new Date().toISOString().slice(0, 10)}.xlsx`, [{ name: 'Excel', extensions: ['xlsx'] }]);
 }

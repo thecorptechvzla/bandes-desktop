@@ -467,12 +467,12 @@ export default function PackingPage() {
     if (tab === 'registro') setSelectedPackingId(null);
   };
 
-  const handleDownloadReport = (packing: ValidationPackingData) => {
-    generateValidationPDF(packing);
+  const handleDownloadReport = async (packing: ValidationPackingData) => {
+    await generateValidationPDF(packing);
   };
 
-  const handleDownloadHistoryReport = (packing: ValidationPackingData) => {
-    generateValidationPDF(packing);
+  const handleDownloadHistoryReport = async (packing: ValidationPackingData) => {
+    await generateValidationPDF(packing);
   };
 
   return (

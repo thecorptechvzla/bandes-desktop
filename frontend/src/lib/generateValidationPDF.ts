@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { saveFile } from '@/lib/saveFile';
 import autoTable from 'jspdf-autotable';
 import type { Bar } from '@/types/api';
 import { formatLey, formatNumber } from '@/lib/format';
@@ -194,7 +195,7 @@ function drawSummary(doc: jsPDF, y: number, pw: number, bars: Bar[]) {
   });
 }
 
-export function generateValidationPDF(packing: ValidationPackingData) {
+export async function generateValidationPDF(packing: ValidationPackingData) {
   const pw = 215.9;
   const ph = 279.4;
 
@@ -320,5 +321,5 @@ export function generateValidationPDF(packing: ValidationPackingData) {
     doc.text(`Pagina ${i} de ${totalPages}`, pw - 10, yText, { align: 'right' });
   }
 
-  doc.save(`Reporte_Validacion_Packing_#${packing.packingNumber ?? packing.id.slice(0, 8)}.pdf`);
+  await saveFile(doc.output('blob'), `Reporte_Validacion_Packing_#${packing.packingNumber ?? packing.id.slice(0, 8)}.pdf`, [{ name: 'PDF', extensions: ['pdf'] }]);
 }

@@ -7,6 +7,8 @@
     "core:default",
     "updater:default",
     "process:default",
+    "dialog:default",
+    "fs:allow-write-file",
     {
       "identifier": "shell:allow-execute",
       "allow": [

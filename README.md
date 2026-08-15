@@ -14,13 +14,17 @@ Sistema de trazabilidad de fundición y bóveda de oro que opera **100% en red l
 
 | Recurso | Valor |
 |---|---|
-| SRV (servidor Windows) | `192.168.88.162` |
-| PostgreSQL | `192.168.88.162:5432` |
-| Servidor de updates (Caddy) | `http://192.168.88.162:8090` |
+| SRV (servidor Windows) | `192.168.1.108` |
+| PostgreSQL | `192.168.1.108:5432` |
+| Servidor de updates (Caddy) | `http://192.168.1.108:8090` |
 | Subred LAN autorizada | `192.168.88.0/24` |
 | Sidecar (local en cada PC) | `http://127.0.0.1:3001` |
 
 Cada PC cliente solo necesita alcanzar el SRV (`5432` y `8090`). **No necesita carpetas ni servicios locales**; el instalador crea todo solo.
+
+> Documentos de referencia:
+> - Manual de instalación/configuración del SRV: [`MANUAL-SRV.md`](./MANUAL-SRV.md)
+> - Errores y soluciones: [`ERRORES-Y-SOLUCIONES.md`](./ERRORES-Y-SOLUCIONES.md)
 
 ---
 
@@ -35,14 +39,14 @@ Los instaladores se compilan en GitHub Actions. TODO se dispara con un push a `m
      - `JWT_SECRET`
      - `TAURI_SIGNING_PRIVATE_KEY`
      - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-2. Commit + push a `main` → el workflow `build-windows.yml` genera `bandes-installers.zip` (contiene `Bandes_0.1.3_x64-setup.exe`, `Bandes_0.1.3_x64_en-US.msi`, `.msi.sig` y `latest.json`).
+2. Commit + push a `main` → el workflow `build-windows.yml` genera `bandes-installers.zip` (contiene `Bandes_0.1.6_x64-setup.exe`, `Bandes_0.1.6_x64_en-US.msi`, `.msi.sig` y `latest.json`).
 3. Esperar a que el run quede en **verde** y descargar el artifact.
 
 ---
 
 ## 2. Instalación en el SRV (uno solo, primera vez)
 
-> Hacer SOLO en el servidor de la red (`192.168.88.162`).
+> Hacer SOLO en el servidor de la red (`192.168.1.108`).
 
 ### 2.1 PostgreSQL
 
@@ -78,21 +82,22 @@ C:\caddy\caddy.exe file-server --root C:\bandes-updates --listen :8090 --browse
 
 1. Extraer `bandes-installers.zip` del artifact.
 2. Copiar al SRV todo el contenido del zip **a `C:\bandes-updates\`**:
-   - `Bandes_0.1.3_x64-setup.exe` (para repartir a clientes)
-   - `Bandes_0.1.3_x64_en-US.msi` + `Bandes_0.1.3_x64_en-US.msi.sig` + `latest.json` (para el auto-update)
+   - `Bandes_0.1.6_x64-setup.exe` (para repartir a clientes)
+   - `Bandes_0.1.6_x64_en-US.msi` + `Bandes_0.1.6_x64_en-US.msi.sig` + `latest.json` (para el auto-update)
 3. En el SRV instalar con el **MSI** (instalación para todos los usuarios) o con `setup.exe` (por usuario):
    ```powershell
-   msiexec /i C:\bandes-updates\Bandes_0.1.3_x64_en-US.msi /qb
+   msiexec /i C:\bandes-updates\Bandes_0.1.6_x64_en-US.msi /qb
    ```
-4. Verificar que el sidecar arranca (no debe crashear):
+4. Verificar que el sidecar arranca (no debe crashear). Con el MSI está en
+   `C:\Program Files\Bandes`; con `setup.exe` por usuario, en `%LOCALAPPDATA%\Bandes`:
    ```powershell
-   cd "$env:LOCALAPPDATA\Bandes"
+   cd "C:\Program Files\Bandes"
    .\backend-api.exe
    ```
    Debe quedarse corriendo y loguear `Nest application successfully started` (Ctrl+C para salir).
-5. Probar el login directo contra el sidecar:
+5. Probar el login directo contra el sidecar (PowerShell; evita el bug de escape de JSON del shell):
    ```powershell
-   curl.exe -X POST http://127.0.0.1:3001/api/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"<tu-password>\"}"
+   Invoke-RestMethod -Uri http://127.0.0.1:3001/api/auth/login -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"<tu-password>"}'
    ```
    → debe responder `200`/`401` con JSON (no error de conexión).
 6. Abrir Bandes y entrar con el usuario administrador.
@@ -112,7 +117,7 @@ Variables opcionales: `ADMIN_USERNAME` (default `admin`), `ADMIN_ROLE` (default 
 
 1. Desarrollar y hacer commit + push a `main` → `bandes-installers.zip` nuevo.
 2. Descargar el zip y **reemplazar** el contenido de `C:\bandes-updates\` (`.msi`, `.msi.sig`, `latest.json`).
-3. Verificar: `curl.exe -I http://192.168.88.162:8090/latest.json` → `200 OK`.
+3. Verificar: `curl.exe -I http://192.168.1.108:8090/latest.json` → `200 OK`.
 4. Los equipos ya instalados **avisarán solos** y se actualizarán desde el SRV (auto-update LAN).
 
 ---
@@ -129,16 +134,16 @@ Variables opcionales: `ADMIN_USERNAME` (default `admin`), `ADMIN_ROLE` (default 
 
 1. Verificar conectividad con el SRV:
 ```powershell
-Test-NetConnection 192.168.88.162 -Port 5432
-Test-NetConnection 192.168.88.162 -Port 8090
+Test-NetConnection 192.168.1.108 -Port 5432
+Test-NetConnection 192.168.1.108 -Port 8090
 ```
    → ambos deben dar `True`.
 
 2. Descargar e instalar (como el usuario que usará la app):
 ```powershell
 cd "$env:USERPROFILE\Downloads"
-curl.exe -O http://192.168.88.162:8090/Bandes_0.1.3_x64-setup.exe
-.\Bandes_0.1.3_x64-setup.exe
+curl.exe -O http://192.168.1.108:8090/Bandes_0.1.6_x64-setup.exe
+.\Bandes_0.1.6_x64-setup.exe
 ```
    - El instalador crea `%LOCALAPPDATA%\Bandes` (`Bandes.exe` + `backend-api-x86_64-pc-windows-msvc.exe`) y el acceso directo en el menú.
    - Si SmartScreen bloquea: "Más información → Ejecutar de todas formas".
@@ -184,7 +189,7 @@ Por defecto la balanza se lee de `COM3` (Windows) o `/dev/ttyUSB0` (Linux). Para
 
 | Síntoma | Causa probable | Acción |
 |---|---|---|
-| "No se puede encontrar esta página" al abrir `http://192.168.88.162:8090/` | Caddy sirve archivos, no listado (a menos que se use `--browse`) | Abrir la URL de un archivo concreto; o relanzar Caddy con `--browse` |
+| "No se puede encontrar esta página" al abrir `http://192.168.1.108:8090/` | Caddy sirve archivos, no listado (a menos que se use `--browse`) | Abrir la URL de un archivo concreto; o relanzar Caddy con `--browse` |
 | La app abre pero al entrar dice "Verifique el sidecar y la red" | El sidecar murió (binding nativo sin empaquetar, etc.) | `cd $env:LOCALAPPDATA\Bandes; .\backend-api.exe` y leer el error de consola |
 | `backend-api.exe` crashea con "No native build was found… bindings-cpp" | pkg no incrusta fielmente los prebuilds de `node_modules` con pnpm | Ver sección **7.1** (solución con shim + dlopen) |
 | Error de conexión a PostgreSQL | Firewall, `pg_hba.conf` o subred distinta a `192.168.88.0/24` | Verificar regla `5432` y `RemoteAddress` |

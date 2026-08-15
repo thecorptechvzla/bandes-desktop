@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { saveFile } from '@/lib/saveFile';
 import { formatWeight, formatLey } from '@/lib/format';
 import { computeComposition } from '@/lib/composition';
 import type { MaterialExit } from '@/types/api';
@@ -451,5 +452,5 @@ export async function generateDispatchPDF(
   }
 
   const safeRef = data.reference.replace(/[/\\?%*:|"<>]/g, '_');
-  doc.save(`Despacho_${safeRef}-${copyType}.pdf`);
+  await saveFile(doc.output('blob'), `Despacho_${safeRef}-${copyType}.pdf`, [{ name: 'PDF', extensions: ['pdf'] }]);
 }

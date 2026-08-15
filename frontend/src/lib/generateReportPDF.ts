@@ -1,5 +1,6 @@
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import { saveFile } from '@/lib/saveFile';
 import { formatWeight, formatNumber, fetchLogoAsBase64 } from '@/lib/format';
 
 interface ClientRow {
@@ -266,5 +267,5 @@ export async function generateReportPDF(data: ReportData) {
   pdf.text('_________________________', pw - m - 45, y);
   pdf.text('Gerencia', pw - m - 45, y + 5);
 
-  pdf.save('Reporte_Conciliacion_Bandes.pdf');
+  await saveFile(pdf.output('blob'), 'Reporte_Conciliacion_Bandes.pdf', [{ name: 'PDF', extensions: ['pdf'] }]);
 }

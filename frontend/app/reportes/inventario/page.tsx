@@ -226,7 +226,7 @@ export default function BovedaReportPage() {
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      generateBovedaReportPDF(bovedaReportData, appliedReportType);
+      await generateBovedaReportPDF(bovedaReportData, appliedReportType);
     } finally {
       setIsExporting(false);
     }

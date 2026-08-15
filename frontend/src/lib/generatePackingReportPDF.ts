@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { saveFile } from '@/lib/saveFile';
 import autoTable from 'jspdf-autotable';
 import type { PackingReportData, ReportType, PackingDetailedRecord } from '@/components/reportes/packing/types';
 import { formatLey, formatNumber } from '@/lib/format';
@@ -457,7 +458,7 @@ function addFooters(doc: jsPDF, pw: number, ph: number) {
   }
 }
 
-export function generatePackingReportPDF(params: GeneratePackingReportPDFParams) {
+export async function generatePackingReportPDF(params: GeneratePackingReportPDFParams) {
   const { reportType, data } = params;
   const { summary } = data;
 
@@ -485,5 +486,5 @@ export function generatePackingReportPDF(params: GeneratePackingReportPDFParams)
 
   addFooters(doc, pw, ph);
 
-  doc.save(`Reporte_Packings_BANDES_${params.reportId.replace('#', '')}.pdf`);
+  await saveFile(doc.output('blob'), `Reporte_Packings_BANDES_${params.reportId.replace('#', '')}.pdf`, [{ name: 'PDF', extensions: ['pdf'] }]);
 }

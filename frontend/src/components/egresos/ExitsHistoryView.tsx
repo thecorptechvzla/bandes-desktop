@@ -147,11 +147,11 @@ export function ExitsHistoryView() {
     setExpandedExitId(null);
   };
 
-  const handlePDF = useCallback((exit: { id: string }, copy: 'CLIENTE' | 'EMPRESA') => {
+  const handlePDF = useCallback(async (exit: { id: string }, copy: 'CLIENTE' | 'EMPRESA') => {
     const source = exits.find(e => e.id === exit.id) as MaterialExit | undefined;
     if (!source) return;
     const result = convertExitToDispatchResult(source);
-    generateDispatchPDF(result, undefined, copy);
+    await generateDispatchPDF(result, undefined, copy);
   }, [exits]);
 
   return (

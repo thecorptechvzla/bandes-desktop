@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { saveFile } from '@/lib/saveFile';
 import type { SaldoRecord, SaldoDetailedRecord, SaldoReportType } from '@/components/reportes/saldos/types';
 import { formatNumber, truncateLey } from '@/lib/format';
 
@@ -387,10 +388,5 @@ export async function generateSaldosReportExcel(params: GenerateSaldosReportExce
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Reporte_Balance_BANDES_${params.reportId.replace('#', '')}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
+  await saveFile(blob, `Reporte_Balance_BANDES_${params.reportId.replace('#', '')}.xlsx`, [{ name: 'Excel', extensions: ['xlsx'] }]);
 }

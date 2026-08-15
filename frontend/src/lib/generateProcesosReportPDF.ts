@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { saveFile } from '@/lib/saveFile';
 import autoTable from 'jspdf-autotable';
 import type { ProcesosReportData, ProcesoReportType, ProcesoDetailedRecord } from '@/components/reportes/procesos/types';
 import { formatNumber } from '@/lib/format';
@@ -445,7 +446,7 @@ function addFooters(doc: jsPDF, pw: number, ph: number) {
   }
 }
 
-export function generateProcesosReportPDF(params: GenerateProcesosReportPDFParams) {
+export async function generateProcesosReportPDF(params: GenerateProcesosReportPDFParams) {
   const { reportType, data } = params;
   const { summary } = data;
 
@@ -473,5 +474,5 @@ export function generateProcesosReportPDF(params: GenerateProcesosReportPDFParam
 
   addFooters(doc, pw, ph);
 
-  doc.save(`Reporte_Procesos_BANDES_${params.reportId.replace('#', '')}.pdf`);
+  await saveFile(doc.output('blob'), `Reporte_Procesos_BANDES_${params.reportId.replace('#', '')}.pdf`, [{ name: 'PDF', extensions: ['pdf'] }]);
 }

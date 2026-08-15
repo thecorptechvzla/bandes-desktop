@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { saveFile } from '@/lib/saveFile';
 import autoTable from 'jspdf-autotable';
 import type { EgresosReportData, EgresoReportType, EgresoDetailedRecord } from '@/components/reportes/egresos/types';
 import { formatLey, formatNumber } from '@/lib/format';
@@ -487,7 +488,7 @@ function addFooters(doc: jsPDF, pw: number, ph: number) {
   }
 }
 
-export function generateEgresosReportPDF(params: GenerateEgresosReportPDFParams) {
+export async function generateEgresosReportPDF(params: GenerateEgresosReportPDFParams) {
   const { reportType, data } = params;
   const { summary } = data;
 
@@ -515,5 +516,5 @@ export function generateEgresosReportPDF(params: GenerateEgresosReportPDFParams)
 
   addFooters(doc, pw, ph);
 
-  doc.save(`Reporte_Egresos_BANDES_${params.reportId.replace('#', '')}.pdf`);
+  await saveFile(doc.output('blob'), `Reporte_Egresos_BANDES_${params.reportId.replace('#', '')}.pdf`, [{ name: 'PDF', extensions: ['pdf'] }]);
 }

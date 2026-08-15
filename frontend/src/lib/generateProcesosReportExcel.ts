@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { saveFile } from '@/lib/saveFile';
 import type { ProcesosReportData, ProcesoReportType } from '@/components/reportes/procesos/types';
 import { formatNumber } from '@/lib/format';
 
@@ -334,10 +335,5 @@ export async function generateProcesosReportExcel(params: GenerateProcesosReport
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Reporte_Procesos_BANDES_${params.reportId.replace('#', '')}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
+  await saveFile(blob, `Reporte_Procesos_BANDES_${params.reportId.replace('#', '')}.xlsx`, [{ name: 'Excel', extensions: ['xlsx'] }]);
 }

@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { saveFile } from '@/lib/saveFile';
 import type { EgresosReportData, EgresoReportType } from '@/components/reportes/egresos/types';
 import { formatLey, formatNumber, truncateLey } from '@/lib/format';
 
@@ -400,10 +401,5 @@ export async function generateEgresosReportExcel(params: GenerateEgresosReportEx
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Reporte_Egresos_BANDES_${params.reportId.replace('#', '')}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
+  await saveFile(blob, `Reporte_Egresos_BANDES_${params.reportId.replace('#', '')}.xlsx`, [{ name: 'Excel', extensions: ['xlsx'] }]);
 }
