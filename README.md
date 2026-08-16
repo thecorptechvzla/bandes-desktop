@@ -64,17 +64,16 @@ host    all    all    192.168.88.0/24    scram-sha-256
 
 ### 2.2 Servidor de updates (Caddy)
 
-1. Copiar `caddy.exe` a `C:\caddy\`.
-2. Crear la carpeta de updates:
-```powershell
-New-Item -ItemType Directory -Force -Path C:\bandes-updates
-```
-3. Arrancar Caddy sirviendo esa carpeta:
-```powershell
-C:\caddy\caddy.exe file-server --root C:\bandes-updates --listen :8090 --browse
-```
-   - Abrir el puerto `8090` en el firewall (`RemoteAddress: 192.168.88.0/24`).
-   - Registrar una tarea programada para que arranque con el inicio de sesión (opcional pero recomendado).
+> Caddy no es un servicio nativo de Windows; se envuelve con **NSSM** como un
+> servicio en segundo plano (`BandesUpdates`). El asistente gráfico
+> (`scripts/Iniciar-Configuracion-Caddy.bat`) crea todo con un clic.
+
+1. Copiar la carpeta `scripts/` al SRV y ejecutar
+   **`Iniciar-Configuracion-Caddy.bat`** (auto-eleva a admin).
+2. En el asistente, **"Instalar / Reparar"**: crea el servicio, sirve
+   `C:\bandes-updates` en el puerto `8090` y lo verifica.
+   (El detalle completo está en `MANUAL-SRV.md` §3.)
+3. Abrir el puerto `8090` en el firewall (`RemoteAddress: 192.168.88.0/24`).
 
 > El root y el puerto se gestionan desde aquí: toda la red descarga e instala updates desde esta URL.
 

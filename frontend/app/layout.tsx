@@ -10,7 +10,8 @@ import {
   ArrowLeftRight, FolderUp, LogOut,
   Calendar, History, Menu, X, Loader2, ChevronDown, FileText, Settings,
 } from 'lucide-react';
-import { isAuthenticated, logout, getSession } from '@/lib/auth';
+import { isAuthenticated, logout, getSession, refreshSession } from '@/lib/auth';
+import type { SessionUser } from '@/lib/auth';
 import { roleLabel } from '@/lib/roles';
 import UpdaterBanner from '@/components/UpdaterBanner';
 import { initErrorLog } from '@/lib/errorLog';
@@ -95,6 +96,7 @@ export default function RootLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [session, setSession] = useState<SessionUser | null>(null);
   const [appVersion, setAppVersion] = useState('');
 
   useEffect(() => {
@@ -128,8 +130,27 @@ export default function RootLayout({
 
   useEffect(() => {
     setHasSession(isAuthenticated());
+    setSession(getSession());
     setSessionReady(true);
   }, [pathname]);
+
+  // Refresca la sesión contra el backend para que el sidebar reaccione a
+  // cambios de rol/módulos sin necesidad de un nuevo login.
+  useEffect(() => {
+    if (!sessionReady || !hasSession) return;
+    let cancelled = false;
+    refreshSession()
+      .then((s) => {
+        if (!cancelled) setSession(s);
+      })
+      .catch(() => {
+        // Un 401 ya limpia la sesión y redirige a /login vía el interceptor.
+        // Cualquier otro fallo (red) conserva la sesión actual sin romper la UI.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionReady, hasSession]);
 
   useEffect(() => {
     if (!sessionReady) return;
@@ -164,7 +185,6 @@ export default function RootLayout({
     setMobileOpen(false);
   }, [pathname]);
 
-  const session = getSession();
   const currentRole = session?.role;
   const allowedModules = session?.allowedModules;
 
@@ -451,10 +471,10 @@ export default function RootLayout({
                     {hasSession && (
                       <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--hud-bg-deepest)] rounded-xl border border-[var(--hud-border)]">
                         <span className="text-[11px] font-mono font-semibold text-[var(--hud-text-primary)]">
-                          {getSession()?.username}
+                          {session?.username}
                         </span>
                         <span className="text-[10px] font-mono uppercase tracking-wide text-[var(--hud-accent-gold)]">
-                          {roleLabel(getSession()?.role)}
+                          {roleLabel(session?.role)}
                         </span>
                       </div>
                     )}

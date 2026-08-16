@@ -114,8 +114,15 @@ export function RolesManager({ roles, isLoading, isError, error, onEdit, onDelet
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-center hidden md:table-cell font-mono text-[var(--pm-text-dim)]">
-                    {role._count?.users ?? 0}
+                  <td className="px-4 py-3.5 text-center hidden md:table-cell">
+                    <div className="font-mono text-[var(--pm-text-dim)]">
+                      {role.users?.length ?? role._count?.users ?? 0}
+                    </div>
+                    {role.users && role.users.length > 0 && (
+                      <div className="mt-0.5 text-[9px] font-mono text-[var(--pm-text-dim)]/70 max-w-[120px] mx-auto truncate" title={role.users.map(u => u.username).join(', ')}>
+                        {role.users.map(u => u.username).join(', ')}
+                      </div>
+                    )}
                   </td>
                   <td className="pr-6 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-1.5">

@@ -63,18 +63,50 @@ Cómo funciona:
 
 ## 3. Instalar y configurar Caddy (servidor de updates)
 
+### 3.1 (Recomendado) Asistente con interfaz gráfica
+
+> Caddy **no implementa servicios de Windows nativo**, por eso se envuelve con
+> **NSSM** en un servicio real (`BandesUpdates`) que corre en segundo plano
+> (sesión 0, sin ventana), arranca solo al boot y se auto-reinicia si cae.
+
+1. Copiar la carpeta `scripts/` del repo al SRV (contiene
+   `caddy-service-setup.ps1` y `Iniciar-Configuracion-Caddy.bat`).
+2. Doble clic en **`Iniciar-Configuracion-Caddy.bat`** (acepta la elevación a
+   administrador).
+3. En el asistente, pulsa **"Instalar / Reparar"**:
+   - Si `nssm.exe` no está, el asistente **intenta descargarlo** (nssm.cc);
+     si no hay internet muestra un mensaje claro pidiendo colocarlo
+     manualmente en `C:\caddy\nssm.exe`.
+   - Crea el servicio `BandesUpdates`, lo arranca y lo verifica
+     (`sc.exe query` = RUNNING y `HTTP 200` en `latest.json`).
+4. Abrir el puerto `8090` en el firewall (`RemoteAddress: 192.168.88.0/24`).
+5. Opcional: marcar **"Descargar caddy.exe automáticamente"** si aún no hay
+   `caddy.exe` en `C:\caddy\`.
+
+El asistente también permite **Detener / Reiniciar / Desinstalar** el servicio y
+**abrir los logs** (`C:\caddy\logs\caddy.out.log` y `caddy.err.log`).
+
+**Verificar:**
+```cmd
+sc.exe query BandesUpdates
+curl.exe -I http://192.168.1.108:8090/latest.json
+```
+
+### 3.2 (Fallback) Manual sin asistente
+
 1. Copiar `caddy.exe` a `C:\caddy\`.
 2. Crear la carpeta de updates:
    ```powershell
    New-Item -ItemType Directory -Force -Path C:\bandes-updates
    ```
-3. Arrancar Caddy sirviendo esa carpeta:
+3. Arrancar Caddy en consola (solo para pruebas; el modo recomendado es el
+   servicio del §3.1):
    ```powershell
    C:\caddy\caddy.exe file-server --root C:\bandes-updates --listen :8090 --browse
    ```
 4. Abrir el puerto `8090` en el firewall (`RemoteAddress: 192.168.88.0/24`).
 5. (Recomendado) Registrar una tarea programada al inicio de sesión para que
-   Caddy arranque solo.
+   Caddy arranque solo — o mejor, el servicio del §3.1.
 
 **Verificar:**
 ```cmd

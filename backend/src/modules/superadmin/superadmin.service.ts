@@ -29,6 +29,7 @@ const ROLE_SELECT = {
   isSystem: true,
   createdAt: true,
   updatedAt: true,
+  users: { select: { username: true } },
   _count: { select: { users: true } },
 } satisfies Prisma.RoleSelect;
 

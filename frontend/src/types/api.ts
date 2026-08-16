@@ -22,6 +22,7 @@ export interface Role {
   isSystem: boolean;
   createdAt: string;
   updatedAt: string;
+  users?: { username: string }[];
   _count?: { users: number };
 }
 

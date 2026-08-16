@@ -285,3 +285,27 @@ usuario elija.
 - **Validación de `DATABASE_URL` en el build** (`backend/scripts/build-desktop.mjs`):
   rechazar URLs cuyo host no sea una IP/hostname válido, para que un valor tipo
   `base` **falle el build** con un mensaje claro en vez de publicarse en el exe.
+
+## §9 — El servicio `BandesUpdates` (Caddy) no arranca o el puerto 8090 queda ocupado
+
+Síntoma: el servicio falla al iniciar, o al instalar aparece
+`listen tcp :8090: bind: address already in use`.
+
+Causa típica: quedó una **consola Caddy vieja** o una **tarea programada** de
+una instalación manual previa, que se queda con el puerto 8090.
+
+Solución (mejor con el asistente `scripts/Iniciar-Configuracion-Caddy.bat`):
+1. Pulsa **"Instalar / Reparar"** — el asistente detiene el servicio existente,
+   mata consolas Caddy viejas y elimina tareas programadas obsoletas, e
+   reinstala el servicio limpio.
+2. Si prefieres manual:
+   ```powershell
+   Get-Process caddy -ErrorAction SilentlyContinue | Stop-Process -Force
+   Get-ScheduledTask | Where-Object { $_.TaskName -match 'caddy' } | Unregister-ScheduledTask -Confirm:$false
+   C:\caddy\nssm.exe restart BandesUpdates
+   ```
+3. Verifica que solo **un** proceso escuche el puerto:
+   ```powershell
+   netstat -ano | findstr :8090
+   ```
+4. Logs: `C:\caddy\logs\caddy.out.log` y `caddy.err.log`.

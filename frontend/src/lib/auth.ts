@@ -48,6 +48,28 @@ export function getSession(): SessionUser | null {
   }
 }
 
+// Refresca la sesión desde el backend (/auth/me) para que el sidebar y los
+// permisos reflejen cambios de rol/módulos sin necesidad de un nuevo login.
+export async function refreshSession(): Promise<SessionUser | null> {
+  if (typeof window === 'undefined') return null;
+  const { data } = await api.get<{
+    id: string;
+    username: string;
+    role: string;
+    roleId?: string | null;
+    allowedModules?: ModuleId[];
+  }>('/auth/me');
+
+  const prev = getSession();
+  const user: SessionUser = {
+    ...data,
+    loginAt: prev?.loginAt ?? new Date().toISOString(),
+  };
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem('bandes_user_role', data.role);
+  return user;
+}
+
 export function clearSession(): void {
   logout();
 }
