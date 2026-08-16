@@ -1,5 +1,4 @@
-import { IsEnum, IsString, Length } from 'class-validator';
-import { UserRole } from '../../../common/constants/roles.js';
+import { IsString, IsUUID, Length } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -10,6 +9,6 @@ export class CreateUserDto {
   @Length(6, 100, { message: 'La contraseña debe tener al menos 6 caracteres' })
   password: string;
 
-  @IsEnum(UserRole, { message: 'Rol inválido (SUPERADMIN|OWNER|ADMIN)' })
-  role: UserRole;
+  @IsUUID(undefined, { message: 'roleId inválido' })
+  roleId: string;
 }

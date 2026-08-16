@@ -2,10 +2,42 @@ export type ClientRole = 'PROVEEDOR' | 'CLIENTE' | 'AMBOS';
 
 export type UserRole = 'SUPERADMIN' | 'OWNER' | 'ADMIN';
 
+export const MODULE_IDS = [
+  'dashboard',
+  'clientes',
+  'packing',
+  'procesos',
+  'egresos',
+  'reportes',
+  'superadmin',
+] as const;
+
+export type ModuleId = (typeof MODULE_IDS)[number];
+
+export interface Role {
+  id: string;
+  name: string;
+  description?: string | null;
+  allowedModules: ModuleId[];
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { users: number };
+}
+
+export interface RoleRef {
+  id: string;
+  name: string;
+  allowedModules: ModuleId[];
+  isSystem: boolean;
+}
+
 export interface User {
   id: string;
   username: string;
   role: UserRole;
+  roleId?: string | null;
+  roleRef?: RoleRef | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -14,14 +46,26 @@ export interface User {
 export interface CreateUserRequest {
   username: string;
   password: string;
-  role: UserRole;
+  roleId: string;
 }
 
 export interface UpdateUserRequest {
   username?: string;
-  role?: UserRole;
+  roleId?: string;
   password?: string;
   active?: boolean;
+}
+
+export interface CreateRoleRequest {
+  name: string;
+  description?: string;
+  allowedModules: ModuleId[];
+}
+
+export interface UpdateRoleRequest {
+  name?: string;
+  description?: string;
+  allowedModules?: ModuleId[];
 }
 
 export interface Client {

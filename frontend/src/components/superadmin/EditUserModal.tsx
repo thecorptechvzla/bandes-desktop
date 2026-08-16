@@ -5,19 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   UserCog, KeyRound, Tag, Power, Check, AlertCircle, X,
 } from 'lucide-react';
-import type { User, UserRole, UpdateUserRequest } from '@/types/api';
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  SUPERADMIN: 'Superadmin',
-  OWNER: 'Dueño',
-  ADMIN: 'Administrador',
-};
-
-const ROLE_STYLES: Record<UserRole, { color: string; bg: string; border: string }> = {
-  SUPERADMIN: { color: 'var(--pm-accent-gold)', bg: 'rgba(212,175,55,0.12)', border: 'rgba(212,175,55,0.35)' },
-  OWNER: { color: 'var(--pm-accent-cyan)', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)' },
-  ADMIN: { color: 'var(--pm-accent-emerald)', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.35)' },
-};
+import type { User, UpdateUserRequest } from '@/types/api';
+import { useSuperadminRoles } from '@/hooks/useSuperadminRoles';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -29,9 +18,10 @@ interface EditUserModalProps {
 }
 
 export function EditUserModal({ isOpen, isPending, user, isSelf, onSubmit, onClose }: EditUserModalProps) {
+  const { data: roles = [], isLoading: rolesLoading } = useSuperadminRoles();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('ADMIN');
+  const [roleId, setRoleId] = useState('');
   const [active, setActive] = useState(true);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
@@ -45,13 +35,19 @@ export function EditUserModal({ isOpen, isPending, user, isSelf, onSubmit, onClo
   useEffect(() => {
     if (isOpen && user) {
       setUsername(user.username);
-      setRole(user.role);
+      setRoleId(
+        user.roleId ||
+        user.roleRef?.id ||
+        roles.find((r) => r.name === user.role)?.id ||
+        roles.find((r) => !r.isSystem)?.id ||
+        '',
+      );
       setActive(user.active);
       setPassword('');
       setFormError('');
       setFormSuccess('');
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, roles]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,10 +63,14 @@ export function EditUserModal({ isOpen, isPending, user, isSelf, onSubmit, onClo
       setFormError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
+    if (!roleId) {
+      setFormError('Selecciona un rol para el usuario.');
+      return;
+    }
 
     const data: UpdateUserRequest = {
       username: username.trim(),
-      role,
+      roleId,
       active,
     };
     if (password) data.password = password;
@@ -169,30 +169,20 @@ export function EditUserModal({ isOpen, isPending, user, isSelf, onSubmit, onClo
                 <label className="text-[11px] font-mono text-[var(--pm-text-dim)] uppercase tracking-wider flex items-center gap-1">
                   <Tag className="w-3 h-3" /> Rol
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['SUPERADMIN', 'OWNER', 'ADMIN'] as const).map(r => {
-                    const s = ROLE_STYLES[r];
-                    const isActive = role === r;
-                    const disabled = isSelf;
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        disabled={disabled}
-                        title={disabled ? 'No puedes modificar tu propio rol' : undefined}
-                        className="py-2.5 rounded-lg border text-[11px] font-mono font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-                        style={
-                          isActive
-                            ? { color: s.color, background: s.bg, borderColor: s.border }
-                            : { color: 'var(--pm-text-dim)', borderColor: 'var(--pm-border)' }
-                        }
-                      >
-                        {ROLE_LABELS[r]}
-                      </button>
-                    );
-                  })}
-                </div>
+                <select
+                  value={roleId}
+                  onChange={(e) => setRoleId(e.target.value)}
+                  disabled={isSelf || rolesLoading}
+                  className="pm-input font-mono appearance-none w-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {rolesLoading && <option value="">Cargando roles...</option>}
+                  {!rolesLoading && roles.length === 0 && <option value="">Sin roles disponibles</option>}
+                  {roles.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}{r.isSystem ? '  ⭐' : ''}
+                    </option>
+                  ))}
+                </select>
                 {isSelf && (
                   <p className="text-[10px] font-mono text-[var(--pm-accent-gold)]">
                     Estás editando tu propio usuario: el rol no se puede modificar.

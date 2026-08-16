@@ -1,5 +1,4 @@
-import { IsBoolean, IsEnum, IsOptional, IsString, Length } from 'class-validator';
-import { UserRole } from '../../../common/constants/roles.js';
+import { IsBoolean, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -8,8 +7,8 @@ export class UpdateUserDto {
   username?: string;
 
   @IsOptional()
-  @IsEnum(UserRole, { message: 'Rol inválido (SUPERADMIN|OWNER|ADMIN)' })
-  role?: UserRole;
+  @IsUUID(undefined, { message: 'roleId inválido' })
+  roleId?: string;
 
   @IsOptional()
   @IsString()

@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import {
   ShieldAlert, Users as UsersIcon, Database, Plus,
-  Trash2, Loader2, Pencil,
+  Trash2, Loader2, Pencil, Shield,
 } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { roleLabel } from '@/lib/roles';
@@ -15,13 +15,24 @@ import {
   useDeleteSuperadminUser,
   useUpdateSuperadminUser,
 } from '@/hooks/useSuperadminUsers';
-import type { User, UserRole, UpdateUserRequest } from '@/types/api';
+import {
+  useSuperadminRoles,
+  useCreateSuperadminRole,
+  useUpdateSuperadminRole,
+  useDeleteSuperadminRole,
+} from '@/hooks/useSuperadminRoles';
+import type {
+  User, UserRole, UpdateUserRequest, Role, CreateUserRequest,
+  CreateRoleRequest, UpdateRoleRequest,
+} from '@/types/api';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { UserFormModal } from '@/components/superadmin/UserFormModal';
 import { EditUserModal } from '@/components/superadmin/EditUserModal';
+import { RoleModal } from '@/components/superadmin/RoleModal';
+import { RolesManager } from '@/components/superadmin/RolesManager';
 import { DangerZone } from '@/components/superadmin/DangerZone';
 
-type Tab = 'users' | 'database';
+type Tab = 'users' | 'roles' | 'database';
 
 const ROLE_STYLES: Record<UserRole, { color: string; bg: string; border: string }> = {
   SUPERADMIN: { color: 'var(--pm-accent-gold)', bg: 'rgba(212,175,55,0.12)', border: 'rgba(212,175,55,0.35)' },
@@ -54,11 +65,24 @@ export default function SuperadminPage() {
   const [showModal, setShowModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [deleteRoleTarget, setDeleteRoleTarget] = useState<Role | null>(null);
 
   const { data: users = [], isLoading, isError, error } = useSuperadminUsers();
   const createUser = useCreateSuperadminUser();
   const deleteUser = useDeleteSuperadminUser();
   const updateUser = useUpdateSuperadminUser();
+
+  const {
+    data: roles = [],
+    isLoading: rolesLoading,
+    isError: rolesError,
+    error: rolesErr,
+  } = useSuperadminRoles();
+  const createRole = useCreateSuperadminRole();
+  const updateRole = useUpdateSuperadminRole();
+  const deleteRole = useDeleteSuperadminRole();
 
   useEffect(() => {
     const session = getSession();
@@ -79,7 +103,7 @@ export default function SuperadminPage() {
 
   if (allowed === false) return null;
 
-  const handleCreate = async (data: { username: string; password: string; role: UserRole }) => {
+  const handleCreate = async (data: CreateUserRequest) => {
     await createUser.mutateAsync(data);
   };
 
@@ -91,6 +115,20 @@ export default function SuperadminPage() {
 
   const handleUpdateUser = async (id: string, data: UpdateUserRequest) => {
     await updateUser.mutateAsync({ id, data });
+  };
+
+  const handleSaveRole = async (data: CreateRoleRequest | UpdateRoleRequest) => {
+    if (editingRole) {
+      await updateRole.mutateAsync({ id: editingRole.id, data });
+    } else {
+      await createRole.mutateAsync(data as CreateRoleRequest);
+    }
+  };
+
+  const handleDeleteRole = async () => {
+    if (!deleteRoleTarget) return;
+    await deleteRole.mutateAsync(deleteRoleTarget.id);
+    setDeleteRoleTarget(null);
   };
 
   const formatDate = (iso: string) =>
@@ -133,6 +171,19 @@ export default function SuperadminPage() {
             <span style={{ color: 'var(--pm-accent-emerald)' }}>Nuevo Usuario</span>
           </button>
         )}
+        {tab === 'roles' && (
+          <button
+            onClick={() => {
+              setEditingRole(null);
+              setShowRoleModal(true);
+            }}
+            className="premium-card px-4 py-2.5 rounded-xl font-mono text-[11px] uppercase tracking-wider font-bold flex items-center gap-2 active:scale-95 transition-all duration-150 cursor-pointer hover:border-[var(--pm-accent-gold)]/40"
+            style={{ borderColor: 'rgba(212,175,55,0.25)' }}
+          >
+            <Plus className="w-3.5 h-3.5 text-[var(--pm-accent-gold)]" />
+            <span style={{ color: 'var(--pm-accent-gold)' }}>Nuevo Rol</span>
+          </button>
+        )}
       </motion.div>
 
       {/* ═══ TABS ═══ */}
@@ -149,6 +200,19 @@ export default function SuperadminPage() {
         >
           <UsersIcon className="w-3.5 h-3.5" />
           Gestión de Usuarios
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('roles')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer ${
+            tab === 'roles'
+              ? 'text-[var(--pm-accent-gold)]'
+              : 'text-[var(--pm-text-dim)] hover:text-[var(--pm-text-primary)]'
+          }`}
+          style={tab === 'roles' ? { background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)' } : { border: '1px solid transparent' }}
+        >
+          <Shield className="w-3.5 h-3.5" />
+          Gestión de Roles
         </button>
         <button
           type="button"
@@ -213,8 +277,9 @@ export default function SuperadminPage() {
                 </thead>
                 <tbody>
                   {users.map(user => {
-                    const s = ROLE_STYLES[user.role];
+                    const s = ROLE_STYLES[user.role] ?? ROLE_STYLES.ADMIN;
                     const isSelf = user.id === currentUserId;
+                    const displayRole = user.roleRef?.name ?? user.role;
                     return (
                       <tr key={user.id} className="border-b border-[var(--pm-border)]/50 hover:bg-[var(--pm-bg-tertiary)]/40 transition-colors">
                         <td className="pl-6 py-3.5">
@@ -232,7 +297,7 @@ export default function SuperadminPage() {
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider border"
                             style={{ color: s.color, background: s.bg, borderColor: s.border }}
                           >
-                            {roleLabel(user.role)}
+                            {displayRole}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-center hidden sm:table-cell">
@@ -275,6 +340,20 @@ export default function SuperadminPage() {
         </motion.div>
       )}
 
+      {tab === 'roles' && (
+        <RolesManager
+          roles={roles}
+          isLoading={rolesLoading}
+          isError={rolesError}
+          error={rolesErr}
+          onEdit={(role) => {
+            setEditingRole(role);
+            setShowRoleModal(true);
+          }}
+          onDelete={setDeleteRoleTarget}
+        />
+      )}
+
       {tab === 'database' && <DangerZone />}
 
       {/* ═══ NEW USER MODAL ═══ */}
@@ -295,6 +374,18 @@ export default function SuperadminPage() {
         onClose={() => setEditingUser(null)}
       />
 
+      {/* ═══ ROLE MODAL ═══ */}
+      <RoleModal
+        isOpen={showRoleModal}
+        isPending={createRole.isPending || updateRole.isPending}
+        role={editingRole}
+        onSubmit={handleSaveRole}
+        onClose={() => {
+          setShowRoleModal(false);
+          setEditingRole(null);
+        }}
+      />
+
       {/* ═══ DELETE CONFIRM ═══ */}
       <ConfirmDialog
         isOpen={!!deleteTarget}
@@ -310,7 +401,27 @@ export default function SuperadminPage() {
       >
         <div className="p-3 rounded-lg border" style={{ background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)' }}>
           <p className="text-[11px] font-mono text-[var(--pm-accent-red)] leading-relaxed">
-            El usuario <b>{deleteTarget?.username}</b> ({deleteTarget ? roleLabel(deleteTarget.role) : ''}) se eliminará de forma permanente. Esta acción no se puede deshacer.
+            El usuario <b>{deleteTarget?.username}</b> ({deleteTarget?.roleRef?.name ?? (deleteTarget ? roleLabel(deleteTarget.role) : '')}) se eliminará de forma permanente. Esta acción no se puede deshacer.
+          </p>
+        </div>
+      </ConfirmDialog>
+
+      {/* ═══ DELETE ROLE CONFIRM ═══ */}
+      <ConfirmDialog
+        isOpen={!!deleteRoleTarget}
+        onClose={() => setDeleteRoleTarget(null)}
+        onConfirm={handleDeleteRole}
+        icon={<Trash2 className="w-4 h-4 text-[var(--pm-accent-red)]" />}
+        title="Eliminar Rol"
+        description={deleteRoleTarget?.name}
+        confirmLabel="Eliminar"
+        confirmIcon={<Trash2 className="w-3.5 h-3.5" />}
+        variant="danger"
+        loading={deleteRole.isPending}
+      >
+        <div className="p-3 rounded-lg border" style={{ background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)' }}>
+          <p className="text-[11px] font-mono text-[var(--pm-accent-red)] leading-relaxed">
+            El rol <b>{deleteRoleTarget?.name}</b> se eliminará de forma permanente. Esta acción no se puede deshacer.
           </p>
         </div>
       </ConfirmDialog>

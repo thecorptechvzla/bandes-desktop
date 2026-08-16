@@ -7,6 +7,7 @@ import { AuthUser } from '../auth/jwt-auth.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UpdateClientDto } from './dto/update-client.dto.js';
+import { CreateRoleDto, RoleIdParamDto, UpdateRoleDto } from './dto/role.dto.js';
 import { SuperadminService } from './superadmin.service.js';
 
 @Controller('superadmin')
@@ -14,6 +15,30 @@ import { SuperadminService } from './superadmin.service.js';
 @Roles(UserRole.SUPERADMIN)
 export class SuperadminController {
   constructor(private service: SuperadminService) {}
+
+  // ── Roles dinámicos ──
+
+  @Get('roles')
+  findAllRoles() {
+    return this.service.findAllRoles();
+  }
+
+  @Post('roles')
+  createRole(@Body() dto: CreateRoleDto) {
+    return this.service.createRole(dto);
+  }
+
+  @Patch('roles/:id')
+  updateRole(@Param() params: RoleIdParamDto, @Body() dto: UpdateRoleDto) {
+    return this.service.updateRole(params.id, dto);
+  }
+
+  @Delete('roles/:id')
+  removeRole(@Param() params: RoleIdParamDto) {
+    return this.service.deleteRole(params.id);
+  }
+
+  // ── Usuarios ──
 
   @Get('users')
   findAllUsers() {

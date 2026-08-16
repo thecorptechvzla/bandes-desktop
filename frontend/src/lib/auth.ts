@@ -1,9 +1,12 @@
 import { api, getAuthToken } from './api';
+import type { ModuleId } from '@/types/api';
 
 export interface SessionUser {
   id: string;
   username: string;
   role: string;
+  roleId?: string | null;
+  allowedModules?: ModuleId[];
   loginAt: string;
 }
 
@@ -13,7 +16,7 @@ const USER_KEY = 'bandes_user';
 export async function login(username: string, password: string): Promise<SessionUser> {
   const { data } = await api.post<{
     token: string;
-    user: { id: string; username: string; role: string };
+    user: { id: string; username: string; role: string; roleId?: string | null; allowedModules?: ModuleId[] };
   }>('/auth/login', { username, password });
 
   localStorage.setItem(TOKEN_KEY, data.token);

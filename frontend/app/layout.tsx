@@ -164,11 +164,20 @@ export default function RootLayout({
     setMobileOpen(false);
   }, [pathname]);
 
-  const currentRole = getSession()?.role;
-  const visibleMenuItems =
-    currentRole === 'SUPERADMIN'
-      ? menuItems
-      : menuItems.filter((m) => m.id !== 'superadmin');
+  const session = getSession();
+  const currentRole = session?.role;
+  const allowedModules = session?.allowedModules;
+
+  let visibleMenuItems;
+  if (currentRole === 'SUPERADMIN') {
+    // El SUPERADMIN siempre ve todo por defecto.
+    visibleMenuItems = menuItems;
+  } else if (!allowedModules || allowedModules.length === 0) {
+    // Fallback para sesiones antiguas (antes de módulos dinámicos).
+    visibleMenuItems = menuItems.filter((m) => m.id !== 'superadmin');
+  } else {
+    visibleMenuItems = menuItems.filter((m) => allowedModules.includes(m.id as any));
+  }
 
   const renderNavItems = (onItemClick?: () => void) =>
     visibleMenuItems.map(item => {

@@ -5,19 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   UserPlus, KeyRound, Tag, Check, AlertCircle, X,
 } from 'lucide-react';
-import type { CreateUserRequest, UserRole } from '@/types/api';
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  SUPERADMIN: 'Superadmin',
-  OWNER: 'Dueño',
-  ADMIN: 'Administrador',
-};
-
-const ROLE_STYLES: Record<UserRole, { color: string; bg: string; border: string }> = {
-  SUPERADMIN: { color: 'var(--pm-accent-gold)', bg: 'rgba(212,175,55,0.12)', border: 'rgba(212,175,55,0.35)' },
-  OWNER: { color: 'var(--pm-accent-cyan)', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)' },
-  ADMIN: { color: 'var(--pm-accent-emerald)', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.35)' },
-};
+import type { CreateUserRequest } from '@/types/api';
+import { useSuperadminRoles } from '@/hooks/useSuperadminRoles';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -27,9 +16,10 @@ interface UserFormModalProps {
 }
 
 export function UserFormModal({ isOpen, isPending, onSubmit, onClose }: UserFormModalProps) {
+  const { data: roles = [], isLoading: rolesLoading } = useSuperadminRoles();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('ADMIN');
+  const [roleId, setRoleId] = useState('');
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [saving, setSaving] = useState(false);
@@ -43,11 +33,15 @@ export function UserFormModal({ isOpen, isPending, onSubmit, onClose }: UserForm
     if (isOpen) {
       setUsername('');
       setPassword('');
-      setRole('ADMIN');
       setFormError('');
       setFormSuccess('');
+      const defaultRole =
+        roles.find((r) => r.name === 'ADMIN') ||
+        roles.find((r) => !r.isSystem) ||
+        roles[0];
+      setRoleId(defaultRole?.id ?? '');
     }
-  }, [isOpen]);
+  }, [isOpen, roles]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,10 +56,14 @@ export function UserFormModal({ isOpen, isPending, onSubmit, onClose }: UserForm
       setFormError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
+    if (!roleId) {
+      setFormError('Selecciona un rol para el usuario.');
+      return;
+    }
 
     setSaving(true);
     try {
-      await onSubmit({ username: username.trim(), password, role });
+      await onSubmit({ username: username.trim(), password, roleId });
       setFormSuccess('Usuario creado correctamente.');
       setSaving(false);
       setTimeout(() => onClose(), 1000);
@@ -154,27 +152,27 @@ export function UserFormModal({ isOpen, isPending, onSubmit, onClose }: UserForm
                 <label className="text-[11px] font-mono text-[var(--pm-text-dim)] uppercase tracking-wider flex items-center gap-1">
                   <Tag className="w-3 h-3" /> Rol
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['SUPERADMIN', 'OWNER', 'ADMIN'] as const).map(r => {
-                    const s = ROLE_STYLES[r];
-                    const active = role === r;
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        className="py-2.5 rounded-lg border text-[11px] font-mono font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                        style={
-                          active
-                            ? { color: s.color, background: s.bg, borderColor: s.border }
-                            : { color: 'var(--pm-text-dim)', borderColor: 'var(--pm-border)' }
-                        }
-                      >
-                        {ROLE_LABELS[r]}
-                      </button>
-                    );
-                  })}
+                <div className="relative">
+                  <select
+                    value={roleId}
+                    onChange={(e) => setRoleId(e.target.value)}
+                    disabled={rolesLoading}
+                    className="pm-input font-mono appearance-none w-full cursor-pointer disabled:opacity-50"
+                  >
+                    {rolesLoading && <option value="">Cargando roles...</option>}
+                    {!rolesLoading && roles.length === 0 && <option value="">Sin roles disponibles</option>}
+                    {roles.map(r => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}{r.isSystem ? '  ⭐' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+                {roles.length > 0 && (
+                  <p className="text-[10px] font-mono text-[var(--pm-text-dim)]">
+                    Los módulos visibles del usuario dependerán de este rol.
+                  </p>
+                )}
               </div>
 
               {/* Messages */}

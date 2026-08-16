@@ -6,24 +6,141 @@ import { AuthUser } from '../auth/jwt-auth.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UpdateClientDto } from './dto/update-client.dto.js';
+import { CreateRoleDto, UpdateRoleDto, validateModules } from './dto/role.dto.js';
 
 const { hash } = bcryptjs;
+
+const USER_SELECT = {
+  id: true,
+  username: true,
+  role: true,
+  roleId: true,
+  active: true,
+  createdAt: true,
+  updatedAt: true,
+  roleRef: { select: { id: true, name: true, allowedModules: true, isSystem: true } },
+} satisfies Prisma.UserSelect;
+
+const ROLE_SELECT = {
+  id: true,
+  name: true,
+  description: true,
+  allowedModules: true,
+  isSystem: true,
+  createdAt: true,
+  updatedAt: true,
+  _count: { select: { users: true } },
+} satisfies Prisma.RoleSelect;
 
 @Injectable()
 export class SuperadminService {
   constructor(private prisma: PrismaService) {}
 
+  // ─────────────────────────────────────────────
+  // ROLES (CRUD)
+  // ─────────────────────────────────────────────
+
+  findAllRoles() {
+    return this.prisma.role.findMany({
+      orderBy: [{ isSystem: 'desc' }, { name: 'asc' }],
+      select: ROLE_SELECT,
+    });
+  }
+
+  async findRole(id: string) {
+    const role = await this.prisma.role.findUnique({
+      where: { id },
+      select: ROLE_SELECT,
+    });
+    if (!role) throw new NotFoundException('Rol no encontrado');
+    return role;
+  }
+
+  async createRole(dto: CreateRoleDto) {
+    const name = dto.name.trim().toUpperCase();
+    const existing = await this.prisma.role.findUnique({ where: { name } });
+    if (existing) throw new BadRequestException(`El rol "${name}" ya existe`);
+
+    if (!validateModules(dto.allowedModules)) {
+      throw new BadRequestException('Alguno de los módulos seleccionados es inválido');
+    }
+
+    return this.prisma.role.create({
+      data: {
+        name,
+        description: dto.description ?? null,
+        allowedModules: dto.allowedModules,
+      },
+      select: ROLE_SELECT,
+    });
+  }
+
+  async updateRole(id: string, dto: UpdateRoleDto) {
+    const role = await this.prisma.role.findUnique({ where: { id } });
+    if (!role) throw new NotFoundException('Rol no encontrado');
+
+    const data: Prisma.RoleUpdateInput = {};
+
+    if (dto.name !== undefined && dto.name.trim().toUpperCase() !== role.name) {
+      if (role.isSystem) {
+        throw new BadRequestException('No puedes renombrar un rol del sistema');
+      }
+      const name = dto.name.trim().toUpperCase();
+      const dup = await this.prisma.role.findUnique({ where: { name } });
+      if (dup) throw new BadRequestException(`El rol "${name}" ya existe`);
+      data.name = name;
+    }
+
+    if (dto.description !== undefined) data.description = dto.description;
+
+    if (dto.allowedModules !== undefined) {
+      if (role.isSystem) {
+        throw new BadRequestException('No puedes modificar los módulos de un rol del sistema');
+      }
+      if (!validateModules(dto.allowedModules)) {
+        throw new BadRequestException('Alguno de los módulos seleccionados es inválido');
+      }
+      data.allowedModules = dto.allowedModules;
+    }
+
+    const updated = await this.prisma.role.update({ where: { id }, data, select: ROLE_SELECT });
+
+    // Sincroniza el campo legacy "role" de los usuarios que usan este rol.
+    if (data.name) {
+      await this.prisma.user.updateMany({
+        where: { roleId: id },
+        data: { role: updated.name },
+      });
+    }
+
+    return updated;
+  }
+
+  async deleteRole(id: string) {
+    const role = await this.prisma.role.findUnique({
+      where: { id },
+      include: { _count: { select: { users: true } } },
+    });
+    if (!role) throw new NotFoundException('Rol no encontrado');
+    if (role.isSystem) {
+      throw new BadRequestException('No puedes eliminar un rol del sistema');
+    }
+    if (role._count.users > 0) {
+      throw new BadRequestException('No puedes eliminar un rol que tiene usuarios asignados');
+    }
+
+    await this.prisma.role.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ─────────────────────────────────────────────
+  // USUARIOS
+  // ─────────────────────────────────────────────
+
   findAllUsers() {
     return this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: USER_SELECT,
     });
   }
 
@@ -33,23 +150,20 @@ export class SuperadminService {
       throw new BadRequestException(`El usuario "${dto.username}" ya existe`);
     }
 
+    const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
+    if (!role) throw new BadRequestException('El rol seleccionado no existe');
+
     const passwordHash = await hash(dto.password, 10);
 
     return this.prisma.user.create({
       data: {
         username: dto.username,
         passwordHash,
-        role: dto.role,
+        role: role.name,
+        roleId: role.id,
         active: true,
       },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: USER_SELECT,
     });
   }
 
@@ -79,12 +193,15 @@ export class SuperadminService {
       data.username = dto.username;
     }
 
-    if (dto.role !== undefined && dto.role !== existing.role) {
-      // Protección: el superadmin no puede rebajarse su propio rol o quedaría sin acceso.
+    if (dto.roleId !== undefined && dto.roleId !== existing.roleId) {
+      // Protección: el superadmin no puede cambiarse su propio rol o quedaría sin acceso.
       if (currentUser.sub === id) {
         throw new BadRequestException('No puedes modificar tu propio rol');
       }
-      data.role = dto.role as any;
+      const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
+      if (!role) throw new BadRequestException('El rol seleccionado no existe');
+      data.roleRef = { connect: { id: role.id } };
+      data.role = role.name;
     }
 
     if (dto.password !== undefined && dto.password.trim() !== '') {
@@ -96,14 +213,7 @@ export class SuperadminService {
     return this.prisma.user.update({
       where: { id },
       data,
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: USER_SELECT,
     });
   }
 

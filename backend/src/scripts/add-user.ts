@@ -26,10 +26,11 @@ async function main() {
   const prisma = new PrismaClient({ adapter });
 
   const passwordHash = await hash(password, 10);
+  const roleRecord = await prisma.role.findUnique({ where: { name: role } });
   const user = await prisma.user.upsert({
     where: { username },
-    update: { passwordHash, role, active: true },
-    create: { username, passwordHash, role },
+    update: { passwordHash, role, active: true, roleId: roleRecord?.id ?? null },
+    create: { username, passwordHash, role, roleId: roleRecord?.id ?? null },
   });
 
   console.log(`[add-user] Usuario "${user.username}" listo (role=${user.role})`);
