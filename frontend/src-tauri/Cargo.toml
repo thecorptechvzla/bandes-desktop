@@ -1,6 +1,6 @@
 [package]
 name = "bandes"
-version = "0.1.9"
+version = "0.1.10"
 description = "Bandes Desktop - trazabilidad de fundicion y boveda de oro"
 authors = ["The Corp Tech"]
 edition = "2021"

@@ -14,6 +14,7 @@ import { isAuthenticated, logout, getSession } from '@/lib/auth';
 import { roleLabel } from '@/lib/roles';
 import UpdaterBanner from '@/components/UpdaterBanner';
 import { initErrorLog } from '@/lib/errorLog';
+import { getVersion } from '@tauri-apps/api/app';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -94,6 +95,25 @@ export default function RootLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [appVersion, setAppVersion] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const isTauri =
+      typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+    (async () => {
+      if (!isTauri) return;
+      try {
+        const v = await getVersion();
+        if (!cancelled) setAppVersion(v);
+      } catch {
+        // Fuera de Tauri o sin permiso: se muestra solo en dev.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setManualOpen(isHistoricoRoute);
@@ -448,7 +468,7 @@ export default function RootLayout({
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--hud-accent-emerald)]" />
                       SYS ONLINE
                     </span>
-                    <span className="hidden sm:inline">Bandes Analytics</span>
+                    <span className="hidden sm:inline">Bandes Analytics{appVersion ? ` · v${appVersion}` : ''}</span>
                   </div>
                 </footer>
               </div>

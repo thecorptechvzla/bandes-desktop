@@ -87,13 +87,38 @@ fn open_logs_folder(app: tauri::AppHandle) {
     }
 }
 
-/// Mata el sidecar backend-api de inmediato. Se invoca desde el frontend justo
-/// antes de instalar una actualización, para que el instalador NSIS no quede
-/// bloqueado por el archivo backend-api.exe en uso.
+/// Mata el sidecar backend-api de inmediato y fuerza su terminación a nivel de
+/// sistema operativo. Se invoca desde el frontend justo antes de instalar una
+/// actualización, para que el instalador NSIS no quede bloqueado por el
+/// archivo backend-api.exe en uso.
+///
+/// Además del hijo trackeado, se aniquilan con `taskkill /F /IM /T` cualquier
+/// proceso zombie/huérfano de `backend-api.exe` (instancias de versiones
+/// anteriores que no son hijos directos de este proceso) y se espera hasta que
+/// el puerto 3001 se libere, garantizando que Windows/AV hayan soltado el
+/// handle del ejecutable antes de que el instalador intente sobreescribirlo.
 #[tauri::command]
 fn stop_sidecar() {
     if let Some(child) = SIDECAR_CHILD.lock().unwrap().take() {
         let _ = child.kill();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let _ = StdCommand::new("taskkill")
+            .args(["/F", "/IM", "backend-api.exe", "/T"])
+            .status();
+
+        // Espera real: poll hasta que el puerto 3001 se libere (proceso muerto).
+        for _ in 0..30 {
+            if TcpStream::connect(("127.0.0.1", 3001)).is_err() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+
+        // Gracia extra para que Windows/antivirus libere el handle del archivo.
+        std::thread::sleep(std::time::Duration::from_millis(500));
     }
 }
 
