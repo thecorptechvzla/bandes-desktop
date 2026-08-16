@@ -8,7 +8,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, Users, Flame,
   ArrowLeftRight, FolderUp, LogOut,
-  Calendar, History, Menu, X, Loader2, ChevronDown, FileText,
+  Calendar, History, Menu, X, Loader2, ChevronDown, FileText, Settings,
 } from 'lucide-react';
 import { isAuthenticated, logout, getSession } from '@/lib/auth';
 import { roleLabel } from '@/lib/roles';
@@ -49,6 +49,7 @@ const menuItems = [
   { id: 'egresos', name: 'Egresos', icon: ArrowLeftRight },
   { id: 'reportes', name: 'Reportes', icon: FileText },
   // { id: 'historicos', name: 'Históricos', icon: History },
+  { id: 'superadmin', name: 'Sistema', icon: Settings },
 ];
 
 const routeLabels: Record<string, string> = {
@@ -59,6 +60,7 @@ const routeLabels: Record<string, string> = {
   egresos: 'Egresos de Material',
   reportes: 'Reportes',
   historicos: 'Históricos',
+  superadmin: 'Sistema',
 };
 
 const historicoChilds = [
@@ -137,8 +139,14 @@ export default function RootLayout({
     setMobileOpen(false);
   }, [pathname]);
 
+  const currentRole = getSession()?.role;
+  const visibleMenuItems =
+    currentRole === 'SUPERADMIN'
+      ? menuItems
+      : menuItems.filter((m) => m.id !== 'superadmin');
+
   const renderNavItems = (onItemClick?: () => void) =>
-    menuItems.map(item => {
+    visibleMenuItems.map(item => {
       const IconComponent = item.icon;
       const isActive = activeTab === item.id;
       const href = `/${item.id}`;

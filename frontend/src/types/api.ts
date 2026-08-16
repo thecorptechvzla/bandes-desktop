@@ -1,5 +1,22 @@
 export type ClientRole = 'PROVEEDOR' | 'CLIENTE' | 'AMBOS';
 
+export type UserRole = 'SUPERADMIN' | 'OWNER' | 'ADMIN';
+
+export interface User {
+  id: string;
+  username: string;
+  role: UserRole;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  role: UserRole;
+}
+
 export interface Client {
   id: string;
   rif: string;

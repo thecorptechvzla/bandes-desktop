@@ -11,6 +11,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { PackingsModule } from './modules/packings/packings.module.js';
 import { ScaleModule } from './modules/scale/scale.module.js';
 import { BlobModule } from './modules/blob/blob.module.js';
+import { SuperadminModule } from './modules/superadmin/superadmin.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { BlobModule } from './modules/blob/blob.module.js';
     DashboardModule,
     PackingsModule,
     ScaleModule,
+    SuperadminModule,
   ],
 })
 export class AppModule {}
