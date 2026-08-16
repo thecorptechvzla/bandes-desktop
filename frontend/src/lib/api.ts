@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logApiError } from '@/lib/errorLog';
 
 // Sidecar local de NestJS: la única API que consume la app de escritorio.
 export const SIDECAR_URL =
@@ -36,6 +37,7 @@ api.interceptors.response.use(
       }
     }
     const message = err.response?.data?.message || err.message || 'Error de conexión';
+    logApiError(err.config?.method ?? 'GET', err.config?.url ?? '', err.response?.status, message);
     console.error('[API Error]', message);
     return Promise.reject(err);
   },

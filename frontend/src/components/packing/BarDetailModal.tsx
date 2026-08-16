@@ -54,13 +54,19 @@ export function BarDetailModal({
     setIsEditing(false);
     setShowPinPad(false);
     setShowCameraModal(false);
-    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
     setPhotoPreviewUrl(null);
     setPhotoUploadedUrl(null);
   }, [bar]);
 
-  const photoUrl = bar.photoUrl || photoUploadedUrl || null;
-  const srcProxy = photoUrl?.startsWith('data:') ? photoUrl : blobViewUrl(photoUrl);
+  useEffect(
+    () => () => {
+      if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    },
+    [photoPreviewUrl],
+  );
+
+  const serverPhoto = bar.photoUrl || photoUploadedUrl || null;
+  const srcProxy = photoPreviewUrl ?? (serverPhoto?.startsWith('data:') ? serverPhoto : blobViewUrl(serverPhoto));
 
   const spGross = spValues?.grossWeight ?? Number(bar.grossWeight);
   const spPurity = spValues?.purity ?? Number(bar.purity);
@@ -86,8 +92,10 @@ export function BarDetailModal({
   }, [uploadPhoto]);
 
   const handleRepeatPhoto = useCallback(() => {
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhotoPreviewUrl(null);
     setShowCameraModal(true);
-  }, []);
+  }, [photoPreviewUrl]);
 
   const handleEditClick = () => {
     setShowPinPad(true);
@@ -148,7 +156,7 @@ export function BarDetailModal({
   };
 
   const canValidate = !isNaN(displayGross) && !isNaN(displayPurity) && displayGross > 0 && displayPurity > 0;
-  const hasPhoto = !!photoUploadedUrl || !!bar.photoUrl;
+  const hasPhoto = !!photoPreviewUrl || !!photoUploadedUrl || !!bar.photoUrl;
   const showSidebar = !readOnly && (isPorValidar || isEditing);
 
   return (

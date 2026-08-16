@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Users as UsersIcon, FolderUp, Flame, ArrowLeftRight,
-  Trash2, Pencil, AlertTriangle, Loader2,
+  Trash2, Pencil, AlertTriangle, Loader2, FolderOpen,
 } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
 import { usePackings } from '@/hooks/usePackings';
@@ -20,6 +20,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ClientEditModal } from '@/components/superadmin/ClientEditModal';
 import { formatRif } from '@/lib/format';
+import { openLogsFolder } from '@/lib/errorLog';
 import type { Client, Packing, Process, MaterialExit, ClientRole } from '@/types/api';
 
 type ModuleTab = 'clients' | 'packings' | 'processes' | 'exits';
@@ -302,6 +303,16 @@ export function DangerZone() {
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={openLogsFolder}
+          className="ml-auto flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider whitespace-nowrap transition-all active:scale-95 cursor-pointer text-[var(--pm-text-dim)] hover:text-[var(--pm-text-primary)] hover:bg-[var(--pm-bg-tertiary)]"
+          style={{ border: '1px solid transparent' }}
+          title="Abrir la carpeta de logs de errores"
+        >
+          <FolderOpen className="w-3.5 h-3.5" />
+          Ver logs
+        </button>
       </div>
 
       {/* ═══ TABLE POR MÓDULO ═══ */}

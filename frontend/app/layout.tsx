@@ -13,6 +13,7 @@ import {
 import { isAuthenticated, logout, getSession } from '@/lib/auth';
 import { roleLabel } from '@/lib/roles';
 import UpdaterBanner from '@/components/UpdaterBanner';
+import { initErrorLog } from '@/lib/errorLog';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -133,6 +134,10 @@ export default function RootLayout({
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    initErrorLog();
   }, []);
 
   useEffect(() => {
