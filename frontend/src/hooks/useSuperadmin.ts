@@ -2,9 +2,26 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import type { ClientRole } from '@/types/api';
 
 function hardDelete(path: string) {
   return api.delete(`/superadmin/${path}`).then((r) => r.data);
+}
+
+export function useSuperadminUpdateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { rif?: string; name?: string; contactInfo?: string; role?: ClientRole };
+    }) => api.patch(`/superadmin/clients/${id}`, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clients'] });
+    },
+  });
 }
 
 export function useHardDeleteClient() {

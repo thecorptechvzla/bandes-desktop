@@ -7,6 +7,7 @@ import { HudButton } from '@/components/tactical/HudButton';
 import { formatNumber } from '@/lib/format';
 import { ModalShell } from '@/components/ui/ModalShell';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { FormattedNumberInput } from '@/components/ui/FormattedNumberInput';
 import { HardwareSyncOverlay } from './HardwareSyncOverlay';
 import { CameraTerminal } from '@/components/tactical/CameraTerminal';
 import { useUpdateLot } from '@/hooks/useLots';
@@ -271,8 +272,8 @@ export function RecoveryModal({ lot, lotBarsMap, processLotsMap, onClose, upload
           <div className="space-y-1">
             <label className="text-[10px] font-mono text-[var(--pm-text-dim)] uppercase tracking-wider">Peso Bruto (g)</label>
             <div className="flex gap-2">
-              <input type="number" step="0.01" value={recoveredWeight}
-                onChange={e => setRecoveredWeight(e.target.value)}
+              <FormattedNumberInput value={recoveredWeight} onChange={setRecoveredWeight}
+                decimals={2} placeholder="0,00"
                 onKeyDown={blockNonNumeric}
                 onPaste={handlePasteNumeric}
                 className="flex-1 bg-[var(--pm-bg-deepest)] border border-[var(--pm-accent-gold)]/30 rounded-lg px-3 py-2 text-xl font-bold font-mono text-[var(--pm-accent-gold)] focus:outline-none focus:border-[var(--pm-accent-gold)] transition-colors"
@@ -289,8 +290,8 @@ export function RecoveryModal({ lot, lotBarsMap, processLotsMap, onClose, upload
           <div className="space-y-1">
             <label className="text-[10px] font-mono text-[var(--pm-text-dim)] uppercase tracking-wider">Ley Au (‰)</label>
             <div className="flex gap-2">
-              <input type="number" min="0" max="1000" step="0.1" value={recoveredLeyAu}
-                onChange={e => setRecoveredLeyAu(e.target.value)}
+              <FormattedNumberInput value={recoveredLeyAu} onChange={setRecoveredLeyAu}
+                decimals={2} placeholder="0,00"
                 onKeyDown={blockNonNumeric}
                 onPaste={handlePasteNumeric}
                 className="flex-1 bg-[var(--pm-bg-deepest)] border border-[var(--pm-border)] rounded-lg px-3 py-2 text-sm font-mono text-[var(--pm-text-primary)] focus:outline-none focus:border-[var(--pm-accent-amber)] transition-colors"

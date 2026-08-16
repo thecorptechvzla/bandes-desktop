@@ -199,8 +199,8 @@ export function BarDetailModal({
                     target.style.display = 'none';
                   }}
                 />
-                {/* Repeat button overlay */}
-                {!readOnly && (
+                {/* Repeat button overlay — solo si la barra está POR_VALIDAR o en modo edición (PIN desbloqueado) */}
+                {!readOnly && (isPorValidar || isEditing) && (
                   <div className="absolute bottom-2 right-2">
                     <button type="button" onClick={handleRepeatPhoto}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/80 text-[11px] font-mono font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer">

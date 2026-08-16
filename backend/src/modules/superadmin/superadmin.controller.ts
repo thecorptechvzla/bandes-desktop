@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { UserRole } from '../../common/constants/roles.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { AuthUser } from '../auth/jwt-auth.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateClientDto } from './dto/update-client.dto.js';
 import { SuperadminService } from './superadmin.service.js';
 
 @Controller('superadmin')
@@ -29,6 +30,11 @@ export class SuperadminController {
   }
 
   // ── Zona de Peligro: Hard Deletes en cascada ──
+
+  @Patch('clients/:id')
+  updateClient(@Param('id') id: string, @Body() dto: UpdateClientDto) {
+    return this.service.updateClient(id, dto);
+  }
 
   @Delete('clients/:id')
   removeClient(@Param('id') id: string) {

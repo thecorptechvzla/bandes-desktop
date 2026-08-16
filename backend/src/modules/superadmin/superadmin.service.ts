@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import bcryptjs from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuthUser } from '../auth/jwt-auth.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateClientDto } from './dto/update-client.dto.js';
 
 const { hash } = bcryptjs;
 
@@ -60,6 +62,47 @@ export class SuperadminService {
 
     await this.prisma.user.delete({ where: { id } });
     return { ok: true };
+  }
+
+  async updateClient(id: string, dto: UpdateClientDto) {
+    const existing = await this.prisma.client.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Cliente no encontrado');
+
+    const data: Prisma.ClientUpdateInput = {};
+
+    if (dto.name !== undefined) data.name = dto.name.toUpperCase();
+    if (dto.contactInfo !== undefined) data.contactInfo = dto.contactInfo;
+    if (dto.role !== undefined) data.role = dto.role as any;
+
+    if (dto.rif !== undefined) {
+      const normalizedRif = this.normalizeRif(dto.rif);
+      if (normalizedRif !== existing.rif) {
+        const duplicate = await this.prisma.client.findUnique({
+          where: { rif: normalizedRif },
+        });
+        if (duplicate) throw new BadRequestException('El RIF ya existe');
+      }
+      data.rif = normalizedRif;
+    }
+
+    return this.prisma.client.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        rif: true,
+        name: true,
+        contactInfo: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  private normalizeRif(raw: string): string {
+    const digits = raw.replace(/^J/i, '').replace(/\D/g, '');
+    return `J${digits}`;
   }
 
   // ─────────────────────────────────────────────────────────────

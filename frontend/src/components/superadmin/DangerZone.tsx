@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Users as UsersIcon, FolderUp, Flame, ArrowLeftRight,
-  Trash2, AlertTriangle, Loader2,
+  Trash2, Pencil, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
 import { usePackings } from '@/hooks/usePackings';
@@ -15,10 +15,12 @@ import {
   useHardDeletePacking,
   useHardDeleteProcess,
   useHardDeleteMaterialExit,
+  useSuperadminUpdateClient,
 } from '@/hooks/useSuperadmin';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ClientEditModal } from '@/components/superadmin/ClientEditModal';
 import { formatRif } from '@/lib/format';
-import type { Client, Packing, Process, MaterialExit } from '@/types/api';
+import type { Client, Packing, Process, MaterialExit, ClientRole } from '@/types/api';
 
 type ModuleTab = 'clients' | 'packings' | 'processes' | 'exits';
 
@@ -67,10 +69,11 @@ interface DangerTableProps<T> {
   getId: (row: T) => string;
   deletingId: string | null;
   onDelete: (row: T) => void;
+  onEdit?: (row: T) => void;
 }
 
 function DangerTable<T>({
-  rows, columns, isLoading, isError, error, emptyLabel, getId, deletingId, onDelete,
+  rows, columns, isLoading, isError, error, emptyLabel, getId, deletingId, onDelete, onEdit,
 }: DangerTableProps<T>) {
   if (isLoading) {
     return (
@@ -126,17 +129,30 @@ function DangerTable<T>({
                   </td>
                 ))}
                 <td className="py-3 pr-6 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onDelete(row)}
-                    disabled={!!deletingId}
-                    title="Eliminar registro (Zona de Peligro)"
-                    className="p-1.5 rounded-lg text-[var(--pm-text-dim)] hover:text-[var(--pm-accent-red)] hover:bg-[var(--pm-accent-red)]/10 transition-all active:scale-90 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    {isDeleting
-                      ? <Loader2 className="w-4 h-4 animate-spin text-[var(--pm-accent-red)]" />
-                      : <Trash2 className="w-4 h-4" />}
-                  </button>
+                  <div className="flex items-center justify-end gap-1.5">
+                    {onEdit && (
+                      <button
+                        type="button"
+                        onClick={() => onEdit(row)}
+                        disabled={!!deletingId}
+                        title="Editar registro"
+                        className="p-1.5 rounded-lg text-[var(--pm-text-dim)] hover:text-[var(--pm-accent-gold)] hover:bg-[var(--pm-accent-gold)]/10 transition-all active:scale-90 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onDelete(row)}
+                      disabled={!!deletingId}
+                      title="Eliminar registro (Zona de Peligro)"
+                      className="p-1.5 rounded-lg text-[var(--pm-text-dim)] hover:text-[var(--pm-accent-red)] hover:bg-[var(--pm-accent-red)]/10 transition-all active:scale-90 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {isDeleting
+                        ? <Loader2 className="w-4 h-4 animate-spin text-[var(--pm-accent-red)]" />
+                        : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </td>
               </tr>
             );
@@ -150,6 +166,7 @@ function DangerTable<T>({
 export function DangerZone() {
   const [activeModule, setActiveModule] = useState<ModuleTab>('clients');
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   const { data: clients = [], isLoading: clientsLoading, isError: clientsError, error: clientsErr } = useClients();
   const { data: packings = [], isLoading: packingsLoading, isError: packingsError, error: packingsErr } = usePackings();
@@ -160,6 +177,7 @@ export function DangerZone() {
   const hardDeletePacking = useHardDeletePacking();
   const hardDeleteProcess = useHardDeleteProcess();
   const hardDeleteExit = useHardDeleteMaterialExit();
+  const updateClient = useSuperadminUpdateClient();
 
   const deleting =
     hardDeleteClient.isPending ||
@@ -177,7 +195,7 @@ export function DangerZone() {
   );
 
   const clientColumns: Column<Client>[] = [
-    { header: 'ID', className: 'pl-6 w-[14%]', render: (c) => <span className="font-mono text-[var(--pm-text-dim)]">{shortId(c.id)}</span> },
+    { header: 'ID', className: 'pl-6 w-[14%] text-left', render: (c) => <span className="font-mono text-[var(--pm-text-dim)] text-left">{shortId(c.id)}</span> },
     { header: 'Nombre / Razón Social', className: 'w-[36%]', render: (c) => <span className="font-mono font-bold text-[var(--pm-text-primary)]">{c.name}</span> },
     { header: 'RIF', className: 'w-[20%]', render: (c) => <span className="font-mono text-[var(--pm-accent-gold)]">{formatRif(c.rif)}</span> },
     { header: 'Creado el', className: 'w-[20%]', render: (c) => <span className="font-mono text-[var(--pm-text-dim)]">{formatDate(c.createdAt)}</span> },
@@ -227,6 +245,16 @@ export function DangerZone() {
   ];
 
   const handleDelete = (target: DeleteTarget) => setDeleteTarget(target);
+
+  const handleEditClient = (client: Client) => setEditingClient(client);
+
+  const handleUpdateClient = async (data: { rif: string; name: string; contactInfo?: string; role: ClientRole; id: string }) => {
+    await updateClient.mutateAsync({
+      id: data.id,
+      data: { rif: data.rif, name: data.name, contactInfo: data.contactInfo, role: data.role },
+    });
+    setEditingClient(null);
+  };
 
   const handleConfirm = async () => {
     if (!deleteTarget) return;
@@ -289,6 +317,7 @@ export function DangerZone() {
             getId={(c) => c.id}
             deletingId={deletingId}
             onDelete={(c) => handleDelete({ type: 'client', id: c.id, label: c.name })}
+            onEdit={handleEditClient}
           />
         )}
 
@@ -354,6 +383,15 @@ export function DangerZone() {
           </p>
         </div>
       </ConfirmDialog>
+
+      {/* ═══ EDITAR PROVEEDOR ═══ */}
+      <ClientEditModal
+        isOpen={!!editingClient}
+        client={editingClient}
+        isPending={updateClient.isPending}
+        onSubmit={handleUpdateClient}
+        onClose={() => setEditingClient(null)}
+      />
     </motion.div>
   );
 }
