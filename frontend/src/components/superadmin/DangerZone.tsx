@@ -37,7 +37,7 @@ const MODULES: { id: ModuleTab; label: string; icon: React.ComponentType<{ class
   { id: 'exits', label: 'Egresos', icon: ArrowLeftRight },
 ];
 
-const TH = 'text-[10px] text-[var(--pm-text-dim)] font-mono font-bold uppercase tracking-widest';
+const TH = 'text-[10px] text-[var(--pm-text-dim)] font-mono font-bold uppercase tracking-widest text-left';
 
 function shortId(id: string): string {
   return id.slice(0, 8);
@@ -198,7 +198,7 @@ export function DangerZone() {
     { header: 'ID', className: 'pl-6 w-[14%] text-left', render: (c) => <span className="font-mono text-[var(--pm-text-dim)] text-left">{shortId(c.id)}</span> },
     { header: 'Nombre / Razón Social', className: 'w-[36%]', render: (c) => <span className="font-mono font-bold text-[var(--pm-text-primary)]">{c.name}</span> },
     { header: 'RIF', className: 'w-[20%]', render: (c) => <span className="font-mono text-[var(--pm-accent-gold)]">{formatRif(c.rif)}</span> },
-    { header: 'Creado el', className: 'w-[20%]', render: (c) => <span className="font-mono text-[var(--pm-text-dim)]">{formatDate(c.createdAt)}</span> },
+    { header: 'Fecha', className: 'w-[20%]', render: (c) => <span className="font-mono text-[var(--pm-text-dim)]">{formatDate(c.createdAt)}</span> },
   ];
 
   const packingColumns: Column<Packing>[] = [
