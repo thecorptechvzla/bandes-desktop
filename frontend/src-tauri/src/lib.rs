@@ -87,6 +87,16 @@ fn open_logs_folder(app: tauri::AppHandle) {
     }
 }
 
+/// Mata el sidecar backend-api de inmediato. Se invoca desde el frontend justo
+/// antes de instalar una actualización, para que el instalador NSIS no quede
+/// bloqueado por el archivo backend-api.exe en uso.
+#[tauri::command]
+fn stop_sidecar() {
+    if let Some(child) = SIDECAR_CHILD.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -95,7 +105,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![log_error, open_logs_folder])
+        .invoke_handler(tauri::generate_handler![log_error, open_logs_folder, stop_sidecar])
         .setup(|app| {
             // La ventana se crea aquí (no desde tauri.conf.json) para poder
             // adjuntar el manejador de descargas: WebView2 cancela toda
@@ -172,7 +182,7 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error al crear Bandes desktop")
         .run(|_app_handle, event| {
-            if let RunEvent::Exit = event {
+            if matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
                 if let Some(child) = SIDECAR_CHILD.lock().unwrap().take() {
                     let _ = child.kill();
                 }

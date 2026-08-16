@@ -5,6 +5,7 @@ import { Roles } from '../../common/decorators/roles.decorator.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { AuthUser } from '../auth/jwt-auth.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UpdateClientDto } from './dto/update-client.dto.js';
 import { SuperadminService } from './superadmin.service.js';
 
@@ -27,6 +28,15 @@ export class SuperadminController {
   @Delete('users/:id')
   removeUser(@Param('id') id: string, @Req() req: Request & { user: AuthUser }) {
     return this.service.deleteUser(id, req.user);
+  }
+
+  @Patch('users/:id')
+  updateUser(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @Req() req: Request & { user: AuthUser },
+  ) {
+    return this.service.updateUser(id, dto, req.user);
   }
 
   // ── Zona de Peligro: Hard Deletes en cascada ──

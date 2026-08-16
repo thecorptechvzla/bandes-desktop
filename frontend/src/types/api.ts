@@ -17,6 +17,13 @@ export interface CreateUserRequest {
   role: UserRole;
 }
 
+export interface UpdateUserRequest {
+  username?: string;
+  role?: UserRole;
+  password?: string;
+  active?: boolean;
+}
+
 export interface Client {
   id: string;
   rif: string;

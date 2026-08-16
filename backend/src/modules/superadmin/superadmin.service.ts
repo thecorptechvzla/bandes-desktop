@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuthUser } from '../auth/jwt-auth.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UpdateClientDto } from './dto/update-client.dto.js';
 
 const { hash } = bcryptjs;
@@ -62,6 +63,48 @@ export class SuperadminService {
 
     await this.prisma.user.delete({ where: { id } });
     return { ok: true };
+  }
+
+  async updateUser(id: string, dto: UpdateUserDto, currentUser: AuthUser) {
+    const existing = await this.prisma.user.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Usuario no encontrado');
+
+    const data: Prisma.UserUpdateInput = {};
+
+    if (dto.username !== undefined && dto.username !== existing.username) {
+      const duplicate = await this.prisma.user.findUnique({
+        where: { username: dto.username },
+      });
+      if (duplicate) throw new BadRequestException(`El usuario "${dto.username}" ya existe`);
+      data.username = dto.username;
+    }
+
+    if (dto.role !== undefined && dto.role !== existing.role) {
+      // Protección: el superadmin no puede rebajarse su propio rol o quedaría sin acceso.
+      if (currentUser.sub === id) {
+        throw new BadRequestException('No puedes modificar tu propio rol');
+      }
+      data.role = dto.role as any;
+    }
+
+    if (dto.password !== undefined && dto.password.trim() !== '') {
+      data.passwordHash = await hash(dto.password, 10);
+    }
+
+    if (dto.active !== undefined) data.active = dto.active;
+
+    return this.prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        active: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   }
 
   async updateClient(id: string, dto: UpdateClientDto) {

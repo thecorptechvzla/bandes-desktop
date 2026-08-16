@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { invoke } from '@tauri-apps/api/core';
 import { Download, X, Loader2, TriangleAlert } from 'lucide-react';
 
 export default function UpdaterBanner() {
@@ -36,6 +37,7 @@ export default function UpdaterBanner() {
     setInstalling(true);
     setError('');
     try {
+      await invoke('stop_sidecar').catch(() => {});
       await update.downloadAndInstall();
       await relaunch();
     } catch {

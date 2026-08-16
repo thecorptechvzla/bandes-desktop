@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { User, CreateUserRequest } from '@/types/api';
+import type { User, CreateUserRequest, UpdateUserRequest } from '@/types/api';
 
 export function useSuperadminUsers() {
   return useQuery<User[]>({
@@ -26,6 +26,17 @@ export function useDeleteSuperadminUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.delete(`/superadmin/users/${id}`).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['superadmin', 'users'] });
+    },
+  });
+}
+
+export function useUpdateSuperadminUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) =>
+      api.patch(`/superadmin/users/${id}`, data).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['superadmin', 'users'] });
     },

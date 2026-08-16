@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import {
   ShieldAlert, Users as UsersIcon, Database, Plus,
-  Trash2, Loader2,
+  Trash2, Loader2, Pencil,
 } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { roleLabel } from '@/lib/roles';
@@ -13,10 +13,12 @@ import {
   useSuperadminUsers,
   useCreateSuperadminUser,
   useDeleteSuperadminUser,
+  useUpdateSuperadminUser,
 } from '@/hooks/useSuperadminUsers';
-import type { User, UserRole } from '@/types/api';
+import type { User, UserRole, UpdateUserRequest } from '@/types/api';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { UserFormModal } from '@/components/superadmin/UserFormModal';
+import { EditUserModal } from '@/components/superadmin/EditUserModal';
 import { DangerZone } from '@/components/superadmin/DangerZone';
 
 type Tab = 'users' | 'database';
@@ -51,10 +53,12 @@ export default function SuperadminPage() {
   const [tab, setTab] = useState<Tab>('users');
   const [showModal, setShowModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   const { data: users = [], isLoading, isError, error } = useSuperadminUsers();
   const createUser = useCreateSuperadminUser();
   const deleteUser = useDeleteSuperadminUser();
+  const updateUser = useUpdateSuperadminUser();
 
   useEffect(() => {
     const session = getSession();
@@ -83,6 +87,10 @@ export default function SuperadminPage() {
     if (!deleteTarget) return;
     await deleteUser.mutateAsync(deleteTarget.id);
     setDeleteTarget(null);
+  };
+
+  const handleUpdateUser = async (id: string, data: UpdateUserRequest) => {
+    await updateUser.mutateAsync({ id, data });
   };
 
   const formatDate = (iso: string) =>
@@ -237,15 +245,25 @@ export default function SuperadminPage() {
                           {formatDate(user.createdAt)}
                         </td>
                         <td className="pr-6 py-3.5 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(user)}
-                            disabled={isSelf}
-                            title={isSelf ? 'No puedes eliminar tu propio usuario' : 'Eliminar usuario'}
-                            className="p-1.5 rounded-lg text-[var(--pm-text-dim)] hover:text-[var(--pm-accent-red)] hover:bg-[var(--pm-accent-red)]/10 transition-all active:scale-90 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setEditingUser(user)}
+                              title="Editar usuario"
+                              className="p-1.5 rounded-lg text-[var(--pm-text-dim)] hover:text-[var(--pm-accent-gold)] hover:bg-[var(--pm-accent-gold)]/10 transition-all active:scale-90 cursor-pointer"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(user)}
+                              disabled={isSelf}
+                              title={isSelf ? 'No puedes eliminar tu propio usuario' : 'Eliminar usuario'}
+                              className="p-1.5 rounded-lg text-[var(--pm-text-dim)] hover:text-[var(--pm-accent-red)] hover:bg-[var(--pm-accent-red)]/10 transition-all active:scale-90 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -265,6 +283,16 @@ export default function SuperadminPage() {
         isPending={createUser.isPending}
         onSubmit={handleCreate}
         onClose={() => setShowModal(false)}
+      />
+
+      {/* ═══ EDIT USER MODAL ═══ */}
+      <EditUserModal
+        isOpen={!!editingUser}
+        isPending={updateUser.isPending}
+        user={editingUser}
+        isSelf={!!editingUser && editingUser.id === currentUserId}
+        onSubmit={handleUpdateUser}
+        onClose={() => setEditingUser(null)}
       />
 
       {/* ═══ DELETE CONFIRM ═══ */}
