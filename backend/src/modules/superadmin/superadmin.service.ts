@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import bcryptjs from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -6,7 +10,12 @@ import { AuthUser } from '../auth/jwt-auth.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UpdateClientDto } from './dto/update-client.dto.js';
-import { CreateRoleDto, UpdateRoleDto, validateModules } from './dto/role.dto.js';
+import {
+  CreateRoleDto,
+  UpdateRoleDto,
+  validateModules,
+} from './dto/role.dto.js';
+import { isValidModuleId } from '../../common/constants/modules.js';
 
 const { hash } = bcryptjs;
 
@@ -15,10 +24,13 @@ const USER_SELECT = {
   username: true,
   role: true,
   roleId: true,
+  customModules: true,
   active: true,
   createdAt: true,
   updatedAt: true,
-  roleRef: { select: { id: true, name: true, allowedModules: true, isSystem: true } },
+  roleRef: {
+    select: { id: true, name: true, allowedModules: true, isSystem: true },
+  },
 } satisfies Prisma.UserSelect;
 
 const ROLE_SELECT = {
@@ -33,6 +45,24 @@ const ROLE_SELECT = {
   _count: { select: { users: true } },
 } satisfies Prisma.RoleSelect;
 
+// Valida el override de permisos de un usuario. [] o ausente => heredar del rol.
+// Nunca se permite inyectar el módulo de Sistema en un override: los endpoints
+// superadmin siguen protegidos por RolesGuard (JWT role === SUPERADMIN).
+function validateUserCustomModules(modules: string[] | undefined): string[] {
+  const list = modules ?? [];
+  for (const m of list) {
+    if (!isValidModuleId(m)) {
+      throw new BadRequestException(`Módulo personalizado inválido: ${m}`);
+    }
+    if (m === 'superadmin') {
+      throw new BadRequestException(
+        'No puedes otorgar el módulo de Sistema (superadmin)',
+      );
+    }
+  }
+  return list;
+}
+
 @Injectable()
 export class SuperadminService {
   constructor(private prisma: PrismaService) {}
@@ -41,11 +71,42 @@ export class SuperadminService {
   // ROLES (CRUD)
   // ─────────────────────────────────────────────
 
-  findAllRoles() {
-    return this.prisma.role.findMany({
+  async findAllRoles() {
+    const roles = await this.prisma.role.findMany({
       orderBy: [{ isSystem: 'desc' }, { name: 'asc' }],
       select: ROLE_SELECT,
     });
+
+    // Merge resiliente de "usuarios huérfanos": cuentas creadas antes de la
+    // Fase 4 tienen roleId = null (campo legacy `role` con el nombre). Aunque
+    // no estén vinculadas por FK, se muestran bajo su rol para que la columna
+    // de Usuarios siempre liste a todos.
+    const orphans = await this.prisma.user.findMany({
+      where: { roleId: null },
+      select: { role: true, username: true },
+    });
+    const byRole = new Map<string, string[]>();
+    for (const u of orphans) {
+      const list = byRole.get(u.role) ?? [];
+      list.push(u.username);
+      byRole.set(u.role, list);
+    }
+
+    for (const role of roles) {
+      const extra = byRole.get(role.name);
+      if (extra?.length) {
+        const seen = new Set(role.users.map((u) => u.username));
+        for (const username of extra) {
+          if (!seen.has(username)) {
+            role.users.push({ username });
+            seen.add(username);
+          }
+        }
+        role._count.users = role.users.length;
+      }
+    }
+
+    return roles;
   }
 
   async findRole(id: string) {
@@ -63,7 +124,9 @@ export class SuperadminService {
     if (existing) throw new BadRequestException(`El rol "${name}" ya existe`);
 
     if (!validateModules(dto.allowedModules)) {
-      throw new BadRequestException('Alguno de los módulos seleccionados es inválido');
+      throw new BadRequestException(
+        'Alguno de los módulos seleccionados es inválido',
+      );
     }
 
     return this.prisma.role.create({
@@ -96,15 +159,23 @@ export class SuperadminService {
 
     if (dto.allowedModules !== undefined) {
       if (role.isSystem) {
-        throw new BadRequestException('No puedes modificar los módulos de un rol del sistema');
+        throw new BadRequestException(
+          'No puedes modificar los módulos de un rol del sistema',
+        );
       }
       if (!validateModules(dto.allowedModules)) {
-        throw new BadRequestException('Alguno de los módulos seleccionados es inválido');
+        throw new BadRequestException(
+          'Alguno de los módulos seleccionados es inválido',
+        );
       }
       data.allowedModules = dto.allowedModules;
     }
 
-    const updated = await this.prisma.role.update({ where: { id }, data, select: ROLE_SELECT });
+    const updated = await this.prisma.role.update({
+      where: { id },
+      data,
+      select: ROLE_SELECT,
+    });
 
     // Sincroniza el campo legacy "role" de los usuarios que usan este rol.
     if (data.name) {
@@ -127,7 +198,9 @@ export class SuperadminService {
       throw new BadRequestException('No puedes eliminar un rol del sistema');
     }
     if (role._count.users > 0) {
-      throw new BadRequestException('No puedes eliminar un rol que tiene usuarios asignados');
+      throw new BadRequestException(
+        'No puedes eliminar un rol que tiene usuarios asignados',
+      );
     }
 
     await this.prisma.role.delete({ where: { id } });
@@ -146,12 +219,16 @@ export class SuperadminService {
   }
 
   async createUser(dto: CreateUserDto) {
-    const existing = await this.prisma.user.findUnique({ where: { username: dto.username } });
+    const existing = await this.prisma.user.findUnique({
+      where: { username: dto.username },
+    });
     if (existing) {
       throw new BadRequestException(`El usuario "${dto.username}" ya existe`);
     }
 
-    const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
+    const role = await this.prisma.role.findUnique({
+      where: { id: dto.roleId },
+    });
     if (!role) throw new BadRequestException('El rol seleccionado no existe');
 
     const passwordHash = await hash(dto.password, 10);
@@ -162,6 +239,7 @@ export class SuperadminService {
         passwordHash,
         role: role.name,
         roleId: role.id,
+        customModules: validateUserCustomModules(dto.customModules),
         active: true,
       },
       select: USER_SELECT,
@@ -190,7 +268,8 @@ export class SuperadminService {
       const duplicate = await this.prisma.user.findUnique({
         where: { username: dto.username },
       });
-      if (duplicate) throw new BadRequestException(`El usuario "${dto.username}" ya existe`);
+      if (duplicate)
+        throw new BadRequestException(`El usuario "${dto.username}" ya existe`);
       data.username = dto.username;
     }
 
@@ -199,7 +278,9 @@ export class SuperadminService {
       if (currentUser.sub === id) {
         throw new BadRequestException('No puedes modificar tu propio rol');
       }
-      const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
+      const role = await this.prisma.role.findUnique({
+        where: { id: dto.roleId },
+      });
       if (!role) throw new BadRequestException('El rol seleccionado no existe');
       data.roleRef = { connect: { id: role.id } };
       data.role = role.name;
@@ -210,6 +291,10 @@ export class SuperadminService {
     }
 
     if (dto.active !== undefined) data.active = dto.active;
+
+    if (dto.customModules !== undefined) {
+      data.customModules = validateUserCustomModules(dto.customModules);
+    }
 
     return this.prisma.user.update({
       where: { id },
@@ -226,7 +311,7 @@ export class SuperadminService {
 
     if (dto.name !== undefined) data.name = dto.name.toUpperCase();
     if (dto.contactInfo !== undefined) data.contactInfo = dto.contactInfo;
-    if (dto.role !== undefined) data.role = dto.role as any;
+    if (dto.role !== undefined) data.role = dto.role;
 
     if (dto.rif !== undefined) {
       const normalizedRif = this.normalizeRif(dto.rif);
@@ -272,7 +357,10 @@ export class SuperadminService {
     await this.prisma.$transaction(async (tx) => {
       const [processes, exits, packings] = await Promise.all([
         tx.process.findMany({ where: { clientId: id }, select: { id: true } }),
-        tx.materialExit.findMany({ where: { clientId: id }, select: { id: true } }),
+        tx.materialExit.findMany({
+          where: { clientId: id },
+          select: { id: true },
+        }),
         tx.packing.findMany({ where: { clientId: id }, select: { id: true } }),
       ]);
       const processIds = processes.map((p) => p.id);
@@ -321,12 +409,18 @@ export class SuperadminService {
         });
       }
 
-      if (barIds.length) await tx.bar.deleteMany({ where: { id: { in: barIds } } });
-      if (detailIds.length) await tx.exitDetail.deleteMany({ where: { id: { in: detailIds } } });
-      if (packingIds.length) await tx.packing.deleteMany({ where: { id: { in: packingIds } } });
-      if (lotIds.length) await tx.lot.deleteMany({ where: { id: { in: lotIds } } });
-      if (exitIds.length) await tx.materialExit.deleteMany({ where: { id: { in: exitIds } } });
-      if (processIds.length) await tx.process.deleteMany({ where: { id: { in: processIds } } });
+      if (barIds.length)
+        await tx.bar.deleteMany({ where: { id: { in: barIds } } });
+      if (detailIds.length)
+        await tx.exitDetail.deleteMany({ where: { id: { in: detailIds } } });
+      if (packingIds.length)
+        await tx.packing.deleteMany({ where: { id: { in: packingIds } } });
+      if (lotIds.length)
+        await tx.lot.deleteMany({ where: { id: { in: lotIds } } });
+      if (exitIds.length)
+        await tx.materialExit.deleteMany({ where: { id: { in: exitIds } } });
+      if (processIds.length)
+        await tx.process.deleteMany({ where: { id: { in: processIds } } });
       await tx.client.delete({ where: { id } });
     });
 
@@ -393,9 +487,12 @@ export class SuperadminService {
         });
       }
 
-      if (barIds.length) await tx.bar.deleteMany({ where: { id: { in: barIds } } });
-      if (detailIds.length) await tx.exitDetail.deleteMany({ where: { id: { in: detailIds } } });
-      if (lotIds.length) await tx.lot.deleteMany({ where: { id: { in: lotIds } } });
+      if (barIds.length)
+        await tx.bar.deleteMany({ where: { id: { in: barIds } } });
+      if (detailIds.length)
+        await tx.exitDetail.deleteMany({ where: { id: { in: detailIds } } });
+      if (lotIds.length)
+        await tx.lot.deleteMany({ where: { id: { in: lotIds } } });
       await tx.process.delete({ where: { id } });
     });
 
@@ -428,7 +525,8 @@ export class SuperadminService {
         await tx.attachment.deleteMany({ where: { entityId: { in: barIds } } });
         await tx.bar.deleteMany({ where: { id: { in: barIds } } });
       }
-      if (detailIds.length) await tx.exitDetail.deleteMany({ where: { id: { in: detailIds } } });
+      if (detailIds.length)
+        await tx.exitDetail.deleteMany({ where: { id: { in: detailIds } } });
       await tx.materialExit.delete({ where: { id } });
     });
 

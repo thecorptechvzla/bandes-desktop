@@ -1,4 +1,13 @@
-import { IsString, IsUUID, Length } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+} from 'class-validator';
+import { MODULE_IDS } from '../../../common/constants/modules.js';
 
 export class CreateUserDto {
   @IsString()
@@ -11,4 +20,17 @@ export class CreateUserDto {
 
   @IsUUID(undefined, { message: 'roleId inválido' })
   roleId: string;
+
+  // Override opcional de permisos: [] o ausente => hereda del rol.
+  @IsOptional()
+  @IsArray({ message: 'customModules debe ser un arreglo' })
+  @ArrayMaxSize(MODULE_IDS.length, {
+    message: 'customModules no puede superar los módulos existentes',
+  })
+  @IsString({ each: true })
+  @IsIn(MODULE_IDS, {
+    each: true,
+    message: 'Módulo personalizado inválido',
+  })
+  customModules?: string[];
 }

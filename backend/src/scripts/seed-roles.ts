@@ -9,13 +9,28 @@ const BASE_ROLES = [
   {
     name: 'SUPERADMIN',
     description: 'Acceso total al sistema',
-    allowedModules: ['dashboard', 'clientes', 'packing', 'procesos', 'egresos', 'reportes', 'superadmin'],
+    allowedModules: [
+      'dashboard',
+      'clientes',
+      'packing',
+      'procesos',
+      'egresos',
+      'reportes',
+      'superadmin',
+    ],
     isSystem: true,
   },
   {
     name: 'OWNER',
     description: 'Dueño de la operación',
-    allowedModules: ['dashboard', 'clientes', 'packing', 'procesos', 'egresos', 'reportes'],
+    allowedModules: [
+      'dashboard',
+      'clientes',
+      'packing',
+      'procesos',
+      'egresos',
+      'reportes',
+    ],
     isSystem: false,
   },
   {
@@ -64,13 +79,26 @@ async function main() {
   for (const { role } of legacyRoles) {
     const target = await prisma.role.findUnique({ where: { name: role } });
     if (!target) continue;
-    const res = await prisma.user.updateMany({
+    const orphans = await prisma.user.findMany({
       where: { roleId: null, role },
-      data: { roleId: target.id },
+      select: { username: true },
     });
-    backfilled += res.count;
+    if (orphans.length) {
+      const res = await prisma.user.updateMany({
+        where: { roleId: null, role },
+        data: { roleId: target.id },
+      });
+      backfilled += res.count;
+      console.log(
+        `[seed:roles]  -> ${res.count} usuario(s) re-linkeados a "${role}": ${orphans
+          .map((u) => u.username)
+          .join(', ')}`,
+      );
+    }
   }
-  console.log(`[seed:roles] Backfill de roleId completado (usuarios asignados: ${backfilled})`);
+  console.log(
+    `[seed:roles] Backfill de roleId completado (usuarios asignados: ${backfilled})`,
+  );
   await prisma.$disconnect();
 }
 

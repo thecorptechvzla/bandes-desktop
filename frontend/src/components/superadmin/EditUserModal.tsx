@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  UserCog, KeyRound, Tag, Power, Check, AlertCircle, X,
+  UserCog, KeyRound, Tag, Power, Check, AlertCircle, X, SlidersHorizontal,
 } from 'lucide-react';
-import type { User, UpdateUserRequest } from '@/types/api';
+import type { User, UpdateUserRequest, ModuleId } from '@/types/api';
 import { useSuperadminRoles } from '@/hooks/useSuperadminRoles';
+import { ModuleChecklist } from './ModuleChecklist';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -23,10 +24,16 @@ export function EditUserModal({ isOpen, isPending, user, isSelf, onSubmit, onClo
   const [password, setPassword] = useState('');
   const [roleId, setRoleId] = useState('');
   const [active, setActive] = useState(true);
+  const [customizing, setCustomizing] = useState(false);
+  const [customSelected, setCustomSelected] = useState<ModuleId[]>([]);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [saving, setSaving] = useState(false);
   const usernameRef = useRef<HTMLInputElement>(null);
+
+  const selectedRole = roles.find((r) => r.id === roleId);
+  const isSuperRole = selectedRole?.name === 'SUPERADMIN';
+  const roleAllowed = (selectedRole?.allowedModules ?? []) as ModuleId[];
 
   useEffect(() => {
     if (isOpen && usernameRef.current) usernameRef.current.focus();
@@ -44,10 +51,26 @@ export function EditUserModal({ isOpen, isPending, user, isSelf, onSubmit, onClo
       );
       setActive(user.active);
       setPassword('');
+      const hasCustom = !!(user.customModules && user.customModules.length > 0);
+      setCustomizing(hasCustom);
+      setCustomSelected(hasCustom && user.customModules ? [...user.customModules] : []);
       setFormError('');
       setFormSuccess('');
     }
   }, [isOpen, user, roles]);
+
+  const toggleCustom = () => {
+    if (isSelf || isSuperRole) return;
+    const next = !customizing;
+    setCustomizing(next);
+    if (next) setCustomSelected((prev) => (prev.length ? prev : [...roleAllowed]));
+  };
+
+  const toggleCustomModule = (id: ModuleId) => {
+    setCustomSelected((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id],
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,11 +90,16 @@ export function EditUserModal({ isOpen, isPending, user, isSelf, onSubmit, onClo
       setFormError('Selecciona un rol para el usuario.');
       return;
     }
+    if (customizing && customSelected.length === 0) {
+      setFormError('Selecciona al menos un módulo para los permisos personalizados.');
+      return;
+    }
 
     const data: UpdateUserRequest = {
       username: username.trim(),
       roleId,
       active,
+      customModules: customizing ? customSelected : [],
     };
     if (password) data.password = password;
 
@@ -186,6 +214,62 @@ export function EditUserModal({ isOpen, isPending, user, isSelf, onSubmit, onClo
                 {isSelf && (
                   <p className="text-[10px] font-mono text-[var(--pm-accent-gold)]">
                     Estás editando tu propio usuario: el rol no se puede modificar.
+                  </p>
+                )}
+              </div>
+
+              {/* Permisos personalizados */}
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={toggleCustom}
+                  disabled={isSelf || isSuperRole}
+                  className="flex items-center justify-between w-full py-2.5 px-4 rounded-lg border transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ borderColor: 'var(--pm-border)' }}
+                >
+                  <span
+                    className={`flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-wider ${
+                      customizing ? 'text-[var(--pm-accent-cyan)]' : 'text-[var(--pm-text-dim)]'
+                    }`}
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    {customizing ? 'Permisos personalizados' : 'Heredar permisos del rol'}
+                  </span>
+                  <span
+                    className="relative w-9 h-5 rounded-full transition-colors"
+                    style={{
+                      background: customizing ? 'rgba(56,189,248,0.4)' : 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    <span
+                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                      style={{ left: customizing ? 'calc(100% - 18px)' : '2px' }}
+                    />
+                  </span>
+                </button>
+                {!isSuperRole && (
+                  <ModuleChecklist
+                    selected={customizing ? customSelected : roleAllowed}
+                    onToggle={toggleCustomModule}
+                    disabled={!customizing || isSelf}
+                    locked={!customizing || isSelf}
+                    hideSuperadmin
+                    accent="cyan"
+                    label="Módulos del Sidebar"
+                    hint={
+                      isSelf
+                        ? 'Estás editando tu propio usuario: los permisos no se pueden modificar.'
+                        : customizing
+                          ? 'Al guardar, este usuario verá exactamente estos módulos.'
+                          : 'Hereda los módulos del rol. Activa "Personalizar permisos" para editarlos.'
+                    }
+                  />
+                )}
+                {isSuperRole && (
+                  <p className="text-[10px] font-mono text-[var(--pm-accent-cyan)] flex items-center gap-1">
+                    <SlidersHorizontal className="w-3 h-3" /> SUPERADMIN siempre ve todos los módulos, no requiere
+                    personalización.
                   </p>
                 )}
               </div>

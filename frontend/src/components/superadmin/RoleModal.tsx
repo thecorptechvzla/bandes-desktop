@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Shield, Check, AlertCircle, X, CheckSquare, Square, Lock,
+  Shield, Check, AlertCircle, X,
 } from 'lucide-react';
 import type { ModuleId, Role, CreateRoleRequest, UpdateRoleRequest } from '@/types/api';
 import { MODULES } from '@/lib/modules';
+import { ModuleChecklist } from './ModuleChecklist';
 
 interface RoleModalProps {
   isOpen: boolean;
@@ -156,53 +157,19 @@ export function RoleModal({ isOpen, isPending, role, onSubmit, onClose }: RoleMo
               </div>
 
               {/* Módulos */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-mono text-[var(--pm-text-dim)] uppercase tracking-wider">
-                    Módulos del Sidebar
-                  </label>
-                  <span className="text-[10px] font-mono text-[var(--pm-text-dim)]">
-                    {selected.length}/{MODULES.length} seleccionados
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {MODULES.map((m) => {
-                    const checked = selected.includes(m.id);
-                    const disabled = isSystem;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => toggleModule(m.id)}
-                        disabled={disabled}
-                        className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-[11px] font-mono transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
-                          checked
-                            ? 'text-[var(--pm-accent-gold)]'
-                            : 'text-[var(--pm-text-dim)]'
-                        }`}
-                        style={{
-                          borderColor: checked ? 'rgba(212,175,55,0.35)' : 'var(--pm-border)',
-                          background: checked ? 'rgba(212,175,55,0.08)' : 'transparent',
-                          opacity: disabled ? 0.75 : 1,
-                        }}
-                      >
-                        {checked ? (
-                          <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                        ) : (
-                          <Square className="w-3.5 h-3.5 shrink-0" />
-                        )}
-                        <span className="truncate">{m.label}</span>
-                        {disabled && <Lock className="w-3 h-3 shrink-0 ml-auto opacity-60" />}
-                      </button>
-                    );
-                  })}
-                </div>
-                {isSystem && (
-                  <p className="text-[10px] font-mono text-[var(--pm-accent-gold)] flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> Rol del sistema: no se puede renombrar ni desmarcar sus módulos.
-                  </p>
-                )}
-              </div>
+              <ModuleChecklist
+                selected={selected}
+                onToggle={toggleModule}
+                disabled={isSystem}
+                locked={isSystem}
+                accent="gold"
+                label="Módulos del Sidebar"
+                hint={
+                  isSystem
+                    ? 'Rol del sistema: no se puede renombrar ni desmarcar sus módulos.'
+                    : null
+                }
+              />
 
               {/* Messages */}
               {formError && (

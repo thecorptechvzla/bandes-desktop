@@ -167,14 +167,15 @@ model Role {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  passwordHash String
-  role         String   @default("ADMIN") // legado: SUPERADMIN | OWNER | ADMIN | <name de Role>
-  roleId       String?
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(uuid())
+  username      String   @unique
+  passwordHash  String
+  role          String   @default("ADMIN") // legado: SUPERADMIN | OWNER | ADMIN | <name de Role>
+  roleId        String?
+  customModules String[] @default([]) // override por usuario: [] => hereda del rol
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   roleRef Role? @relation(fields: [roleId], references: [id], onDelete: SetNull)
 }

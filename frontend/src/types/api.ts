@@ -39,6 +39,7 @@ export interface User {
   role: UserRole;
   roleId?: string | null;
   roleRef?: RoleRef | null;
+  customModules?: ModuleId[];
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -48,6 +49,7 @@ export interface CreateUserRequest {
   username: string;
   password: string;
   roleId: string;
+  customModules?: ModuleId[];
 }
 
 export interface UpdateUserRequest {
@@ -55,6 +57,7 @@ export interface UpdateUserRequest {
   roleId?: string;
   password?: string;
   active?: boolean;
+  customModules?: ModuleId[];
 }
 
 export interface CreateRoleRequest {

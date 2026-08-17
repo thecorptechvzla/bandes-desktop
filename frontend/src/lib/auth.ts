@@ -7,6 +7,7 @@ export interface SessionUser {
   role: string;
   roleId?: string | null;
   allowedModules?: ModuleId[];
+  customModules?: ModuleId[];
   loginAt: string;
 }
 
