@@ -2,6 +2,7 @@ import type { ModuleId } from '@/types/api';
 
 // Orden de importancia para elegir la ruta por defecto tras iniciar sesión.
 const MODULE_PRIORITY: ModuleId[] = [
+  'mi-panel',
   'dashboard',
   'clientes',
   'packing',
@@ -13,6 +14,7 @@ const MODULE_PRIORITY: ModuleId[] = [
 
 // Ruta inicial por módulo. Reportes cae en su primera subpágina.
 const MODULE_ROUTES: Record<ModuleId, string> = {
+  'mi-panel': '/mi-panel',
   dashboard: '/dashboard',
   clientes: '/clientes',
   packing: '/packing',
@@ -23,6 +25,7 @@ const MODULE_ROUTES: Record<ModuleId, string> = {
 };
 
 const MODULE_SEGMENTS: ModuleId[] = [
+  'mi-panel',
   'dashboard',
   'clientes',
   'packing',

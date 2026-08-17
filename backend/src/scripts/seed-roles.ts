@@ -24,6 +24,7 @@ const BASE_ROLES = [
     name: 'OWNER',
     description: 'Dueño de la operación',
     allowedModules: [
+      'mi-panel',
       'dashboard',
       'clientes',
       'packing',
@@ -36,7 +37,14 @@ const BASE_ROLES = [
   {
     name: 'ADMIN',
     description: 'Administrador operativo',
-    allowedModules: ['dashboard', 'clientes', 'packing', 'procesos', 'egresos'],
+    allowedModules: [
+      'mi-panel',
+      'dashboard',
+      'clientes',
+      'packing',
+      'procesos',
+      'egresos',
+    ],
     isSystem: false,
   },
 ];
@@ -69,7 +77,7 @@ async function main() {
     const exists = await prisma.role.findUnique({ where: { name: role } });
     if (!exists) {
       await prisma.role.create({
-        data: { name: role, allowedModules: ['dashboard'] },
+        data: { name: role, allowedModules: ['mi-panel', 'dashboard'] },
       });
       console.log(`[seed:roles] Rol legacy "${role}" creado`);
     }

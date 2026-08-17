@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GoldTraceabilityProvider } from '@/context/GoldTraceabilityContext';
 import Link from 'next/link';
 import {
-  LayoutDashboard, Users, Flame,
+  LayoutDashboard, Users, User, Flame,
   ArrowLeftRight, FolderUp, LogOut,
   Calendar, History, Menu, X, Loader2, ChevronDown, FileText, Settings,
 } from 'lucide-react';
@@ -47,6 +47,7 @@ const queryClient = new QueryClient({
 });
 
 const menuItems = [
+  { id: 'mi-panel', name: 'Mi Panel', icon: User },
   { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
   { id: 'clientes', name: 'Proveedores', icon: Users },
   { id: 'packing', name: 'Packing', icon: FolderUp },
@@ -58,6 +59,7 @@ const menuItems = [
 ];
 
 const routeLabels: Record<string, string> = {
+  'mi-panel': 'Mi Panel',
   dashboard: 'Dashboard',
   clientes: 'Proveedores',
   packing: 'Packing',
@@ -220,8 +222,9 @@ export default function RootLayout({
 
   let visibleMenuItems;
   if (currentRole === 'SUPERADMIN') {
-    // El SUPERADMIN siempre ve todo por defecto.
-    visibleMenuItems = menuItems;
+    // El SUPERADMIN siempre ve todo por defecto, salvo "Mi Panel" (pantalla
+    // operativa, exclusiva de roles no gerenciales).
+    visibleMenuItems = menuItems.filter((m) => m.id !== 'mi-panel');
   } else if (!allowedModules || allowedModules.length === 0) {
     // Fallback para sesiones antiguas (antes de módulos dinámicos).
     visibleMenuItems = menuItems.filter((m) => m.id !== 'superadmin');

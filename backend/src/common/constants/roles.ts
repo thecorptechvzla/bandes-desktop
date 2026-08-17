@@ -1,3 +1,5 @@
+import { MODULE_IDS } from './modules.js';
+
 export enum UserRole {
   SUPERADMIN = 'SUPERADMIN',
   OWNER = 'OWNER',
@@ -10,16 +12,15 @@ export const VALID_USER_ROLES = [
   UserRole.ADMIN,
 ];
 
-// Fallback cuando el usuario aún no tiene roleId (migración en curso): el
-// SUPERADMIN legacy ve todo, el resto ve todo salvo el módulo de Sistema.
-const ALL_MODULES = [
-  'dashboard',
-  'clientes',
-  'packing',
-  'procesos',
-  'egresos',
-  'reportes',
-  'superadmin',
+// Módulos que ve el SUPERADMIN: el dashboard gerencial/financiero queda
+// exclusivo de roles gerenciales; "mi-panel" es la pantalla del operador.
+const SUPERADMIN_MODULES = MODULE_IDS.filter((m) => m !== 'mi-panel');
+
+// Default de usuarios operativos (legacy sin roleId o roles sin allowedModules):
+// "mi-panel" primero (su landing), luego todo salvo el módulo de Sistema.
+const OPERATIVE_MODULES = [
+  'mi-panel',
+  ...MODULE_IDS.filter((m) => m !== 'superadmin' && m !== 'mi-panel'),
 ];
 
 export function resolveAllowedModules(
@@ -27,8 +28,8 @@ export function resolveAllowedModules(
   roleAllowed?: string[] | null,
 ): string[] {
   if (roleAllowed && roleAllowed.length > 0) return roleAllowed;
-  if (legacyRole === UserRole.SUPERADMIN) return [...ALL_MODULES];
-  return ALL_MODULES.filter((m) => m !== 'superadmin');
+  if (legacyRole === UserRole.SUPERADMIN) return [...SUPERADMIN_MODULES];
+  return [...OPERATIVE_MODULES];
 }
 
 export interface UserModuleContext {
@@ -46,10 +47,10 @@ export interface UserModuleContext {
 export function resolveUserModules(ctx: UserModuleContext): string[] {
   const isSuperadmin =
     ctx.role === UserRole.SUPERADMIN || ctx.roleRefName === UserRole.SUPERADMIN;
-  if (isSuperadmin) return [...ALL_MODULES];
+  if (isSuperadmin) return [...SUPERADMIN_MODULES];
 
   const custom = (ctx.customModules ?? []).filter(
-    (m) => ALL_MODULES.includes(m) && m !== 'superadmin',
+    (m) => (MODULE_IDS as readonly string[]).includes(m) && m !== 'superadmin',
   );
   if (custom.length > 0) return custom;
 

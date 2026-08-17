@@ -1,6 +1,7 @@
 // Ids de módulos del sidebar. Minúsculas y = a los ids del menú frontend,
 // para que el gating sea un `includes()` directo sin mapeo.
 export const MODULE_IDS = [
+  'mi-panel',
   'dashboard',
   'clientes',
   'packing',

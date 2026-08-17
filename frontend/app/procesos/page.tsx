@@ -16,6 +16,7 @@ import { EvidenceModal } from '@/components/packing/EvidenceModal';
 import { CompletedProcessesSection } from '@/components/procesos/CompletedProcessesSection';
 import type { Process, Lot, Bar } from '@/types/api';
 import { uploadBlob } from '@/lib/api';
+import { getSession } from '@/lib/auth';
 
 export default function V2ProcesosPage() {
   const { data: bars = [] } = useBars();
@@ -206,7 +207,7 @@ export default function V2ProcesosPage() {
       await createProcess.mutateAsync({
         clientId: representativeClientId,
         barIds: selectedBarIds,
-        operator: 'SISTEMA',
+        operator: getSession()?.username ?? 'SISTEMA',
         moldCode: `FND-${Date.now().toString(36).toUpperCase()}`,
       });
       setFormSuccess(

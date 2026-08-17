@@ -3,6 +3,7 @@ export type ClientRole = 'PROVEEDOR' | 'CLIENTE' | 'AMBOS';
 export type UserRole = 'SUPERADMIN' | 'OWNER' | 'ADMIN';
 
 export const MODULE_IDS = [
+  'mi-panel',
   'dashboard',
   'clientes',
   'packing',
@@ -279,6 +280,33 @@ export interface DashboardMetrics {
     porcentaje: number;
   };
   dailyFlow: { date: string; ingresos: number; egresos: number }[];
+}
+
+/* ─── Dashboard Operativo (Mi Panel) ─── */
+
+export interface OperatorKpis {
+  procesosAtendidos: number;
+  lotesOperados: number;
+  barrasEnProcesos: number;
+  recuperadoGramos: number;
+  pendientesPorValidar: number;
+}
+
+export interface OperatorActivityItem {
+  id: string;
+  name: string;
+  processName: string;
+  clientName: string;
+  processStatus: 'OPEN' | 'CLOSED' | 'CANCELLED';
+  moldCode?: string | null;
+  barCount: number;
+  recovered: number | null;
+  date: string;
+}
+
+export interface OperatorMetricsResponse {
+  kpis: OperatorKpis;
+  actividadReciente: OperatorActivityItem[];
 }
 
 export interface BulkUploadRecord {

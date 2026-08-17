@@ -128,6 +128,64 @@ export class DashboardService {
     };
   }
 
+  async getOperatorMetrics(username: string) {
+    const [procesosAtendidos, lotesOperados, barsAgg, recoveredAgg, pendientes, recentLots] =
+      await Promise.all([
+        // Procesos distintos donde el usuario fue operador de al menos un lote.
+        this.prisma.lot
+          .groupBy({ by: ['processId'], where: { operator: username } })
+          .then((r) => r.length),
+
+        this.prisma.lot.count({ where: { operator: username } }),
+
+        this.prisma.bar.aggregate({
+          where: { lot: { operator: username } },
+          _count: true,
+        }),
+
+        this.prisma.lot.aggregate({
+          where: { operator: username, recovered: { not: null } },
+          _sum: { recovered: true },
+        }),
+
+        // Trabajo global pendiente de validación (no atribuible a un usuario).
+        this.prisma.bar.count({ where: { status: 'POR_VALIDAR' } }),
+
+        this.prisma.lot.findMany({
+          where: { operator: username },
+          orderBy: { updatedAt: 'desc' },
+          take: 8,
+          include: {
+            process: {
+              include: { client: { select: { id: true, name: true } } },
+            },
+            _count: { select: { bars: true } },
+          },
+        }),
+      ]);
+
+    return {
+      kpis: {
+        procesosAtendidos,
+        lotesOperados,
+        barrasEnProcesos: barsAgg._count,
+        recuperadoGramos: Number(recoveredAgg._sum.recovered ?? 0),
+        pendientesPorValidar: pendientes,
+      },
+      actividadReciente: recentLots.map((lot) => ({
+        id: lot.id,
+        name: lot.name,
+        processName: lot.process.name,
+        clientName: lot.process.client.name,
+        processStatus: lot.process.status,
+        moldCode: lot.moldCode,
+        barCount: lot._count.bars,
+        recovered: lot.recovered !== null ? Number(lot.recovered) : null,
+        date: lot.updatedAt.toISOString(),
+      })),
+    };
+  }
+
   private async getDailyFlow(filters: MetricsFilters) {
     const start = filters.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const end = filters.endDate || new Date().toISOString().split('T')[0];
