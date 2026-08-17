@@ -14,6 +14,8 @@ export interface SessionUser {
 const TOKEN_KEY = 'bandes_token';
 const USER_KEY = 'bandes_user';
 
+export const SHOW_WELCOME_KEY = 'showWelcome';
+
 export async function login(username: string, password: string): Promise<SessionUser> {
   const { data } = await api.post<{
     token: string;

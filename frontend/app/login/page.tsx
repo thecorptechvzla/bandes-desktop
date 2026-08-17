@@ -4,7 +4,8 @@ import React, { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { User, Lock, Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
-import { getSession, login } from '@/lib/auth';
+import { getSession, login, SHOW_WELCOME_KEY } from '@/lib/auth';
+import { firstAllowedRoute } from '@/lib/routing';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (getSession()) {
-      router.replace('/dashboard');
+      router.replace(firstAllowedRoute(getSession()?.allowedModules));
     }
   }, [router]);
 
@@ -36,8 +37,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(username.trim(), password);
-      router.replace('/dashboard');
+      const user = await login(username.trim(), password);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(SHOW_WELCOME_KEY, 'true');
+      }
+      router.replace(firstAllowedRoute(user.allowedModules));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string | string[] } } })
         .response?.data?.message;

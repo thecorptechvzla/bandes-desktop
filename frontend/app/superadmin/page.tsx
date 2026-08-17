@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { roleLabel } from '@/lib/roles';
+import { firstAllowedRoute } from '@/lib/routing';
 import {
   useSuperadminUsers,
   useCreateSuperadminUser,
@@ -88,7 +89,7 @@ export default function SuperadminPage() {
     const session = getSession();
     const ok = session?.role === 'SUPERADMIN';
     setAllowed(ok);
-    if (!ok) router.replace('/dashboard');
+    if (!ok) router.replace(firstAllowedRoute(session?.allowedModules));
   }, [router]);
 
   const currentUserId = getSession()?.id;

@@ -10,10 +10,12 @@ import {
   ArrowLeftRight, FolderUp, LogOut,
   Calendar, History, Menu, X, Loader2, ChevronDown, FileText, Settings,
 } from 'lucide-react';
-import { isAuthenticated, logout, getSession, refreshSession } from '@/lib/auth';
+import { isAuthenticated, logout, getSession, refreshSession, SHOW_WELCOME_KEY } from '@/lib/auth';
 import type { SessionUser } from '@/lib/auth';
 import { roleLabel } from '@/lib/roles';
+import { firstAllowedRoute, moduleForPath } from '@/lib/routing';
 import UpdaterBanner from '@/components/UpdaterBanner';
+import WelcomeOverlay from '@/components/ui/WelcomeOverlay';
 import { initErrorLog } from '@/lib/errorLog';
 import { getVersion } from '@tauri-apps/api/app';
 import { Geist, Geist_Mono } from 'next/font/google';
@@ -98,6 +100,7 @@ export default function RootLayout({
   const [hasSession, setHasSession] = useState(false);
   const [session, setSession] = useState<SessionUser | null>(null);
   const [appVersion, setAppVersion] = useState('');
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,11 +156,38 @@ export default function RootLayout({
   }, [sessionReady, hasSession]);
 
   useEffect(() => {
+    if (!sessionReady || !hasSession) return;
+    if (typeof window === 'undefined') return;
+    if (sessionStorage.getItem(SHOW_WELCOME_KEY) === 'true') {
+      sessionStorage.removeItem(SHOW_WELCOME_KEY);
+      setShowWelcome(true);
+    }
+  }, [sessionReady, hasSession]);
+
+  useEffect(() => {
     if (!sessionReady) return;
     const authed = isAuthenticated();
-    if (pathname.startsWith('/login') && authed) router.replace('/dashboard');
+    if (pathname.startsWith('/login') && authed) {
+      router.replace(firstAllowedRoute(session?.allowedModules ?? getSession()?.allowedModules));
+    }
     if (!pathname.startsWith('/login') && !authed) router.replace('/login');
-  }, [sessionReady, pathname, router]);
+  }, [sessionReady, pathname, router, session]);
+
+  // Guard de rutas por módulos: si la URL actual requiere un módulo que el
+  // usuario no tiene (incluso escribiéndola manualmente), se le redirige a la
+  // primera ruta permitida. No se tocan sesiones sin allowedModules (legacy)
+  // para evitar lockear a nadie, y SUPERADMIN siempre ve todo.
+  useEffect(() => {
+    if (!sessionReady || !hasSession || pathname.startsWith('/login')) return;
+    const allowed =
+      session?.allowedModules ?? getSession()?.allowedModules;
+    if (!allowed?.length) return;
+    if (session?.role === 'SUPERADMIN') return;
+    const required = moduleForPath(pathname);
+    if (required && !allowed.includes(required)) {
+      router.replace(firstAllowedRoute(allowed));
+    }
+  }, [sessionReady, hasSession, pathname, session, router]);
 
   const handleLogout = () => {
     logout();
@@ -504,6 +534,12 @@ export default function RootLayout({
             </div>
           </GoldTraceabilityProvider>
         </QueryClientProvider>
+        {showWelcome && session?.username && (
+          <WelcomeOverlay
+            username={session.username}
+            onDone={() => setShowWelcome(false)}
+          />
+        )}
       </body>
     </html>
   );

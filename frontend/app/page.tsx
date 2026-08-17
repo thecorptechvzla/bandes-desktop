@@ -3,16 +3,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession } from '@/lib/auth';
-
-// hola como estas?
-// hola como estas?
-
+import { firstAllowedRoute } from '@/lib/routing';
 
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(getSession() ? '/dashboard' : '/login');
+    router.replace(getSession() ? firstAllowedRoute(getSession()?.allowedModules) : '/login');
   }, [router]);
 
   return null;
