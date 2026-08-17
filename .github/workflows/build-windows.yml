@@ -80,7 +80,7 @@ jobs:
             platforms = @{
               'windows-x86_64' = @{
                 signature = $sigLine
-                url = "http://192.168.1.108:8090/$($setup.Name)"
+                url = "http://192.168.88.162:8090/$($setup.Name)"
               }
             }
           }

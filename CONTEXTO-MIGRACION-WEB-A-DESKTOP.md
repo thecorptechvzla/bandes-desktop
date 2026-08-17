@@ -66,7 +66,7 @@ Contabilidad de custodia: el peso se rastrea del **peso bruto teórico (BI)** al
 - **API base:** `frontend/src/lib/api.ts` → `http://127.0.0.1:3001/api` (override con `NEXT_PUBLIC_API_URL`). Inyecta `Authorization: Bearer <token>` y redirige a `/login/` en 401.
 - **Shell:** `frontend/src-tauri/` (Tauri v2, WebView2). La ventana se crea en `lib.rs` dentro de `.setup` con `WebviewWindowBuilder` (título "Bandes - Control Mining", 1440×900) para poder adjuntar el manejador de **descargas** (`on_download`), porque **WebView2 cancela silenciosamente las descargas** si no se registra.
 - **Plugins Tauri:** `shell` (spawn sidecar), `updater`, `process` (relaunch tras update), `dialog`, `fs`.
-- **CSP** (`tauri.conf.json`): `default-src 'self'`; `connect-src` permite `127.0.0.1:3001` (sidecar) y `192.168.1.108:8090` (updates).
+- **CSP** (`tauri.conf.json`): `default-src 'self'`; `connect-src` permite `127.0.0.1:3001` (sidecar) y `192.168.88.162:8090` (updates).
 
 ### 4.2 Backend — NestJS 11 como sidecar local
 
@@ -78,7 +78,7 @@ Contabilidad de custodia: el peso se rastrea del **peso bruto teórico (BI)** al
 
 ### 4.3 Base de datos y secretos
 
-- **BD central:** PostgreSQL en el **SRV** de la red → `192.168.1.108:5432` (la IP migró de `192.168.88.162` a `192.168.1.108`).
+- **BD central:** PostgreSQL en el **SRV** de la red → `192.168.88.162:5432` (la IP migró de `192.168.1.108` a `192.168.88.162`).
 - **`DATABASE_URL` y `JWT_SECRET` se incrustan en el exe en build** (`backend/scripts/build-desktop.mjs`): prioridad `process.env` > `backend/.env`. En CI vienen de los **secrets de GitHub**.
 - ⚠️ Si cambias de IP/BD: actualizar el secret `DATABASE_URL` de GitHub **antes** de compilar, y el `backend/.env` local (ver `ERRORES-Y-SOLUCIONES.md` §2).
 
@@ -102,7 +102,7 @@ Contabilidad de custodia: el peso se rastrea del **peso bruto teórico (BI)** al
 
 ### 4.7 Actualizaciones (LAN)
 
-- **Tauri updater + minisign** (`tauri-plugin-updater`). `UpdaterBanner.tsx` (guarded por `isTauri`) chequea al abrir la app contra `http://192.168.1.108:8090/latest.json` (`dangerousInsecureTransportProtocol: true` porque es HTTP en LAN).
+- **Tauri updater + minisign** (`tauri-plugin-updater`). `UpdaterBanner.tsx` (guarded por `isTauri`) chequea al abrir la app contra `http://192.168.88.162:8090/latest.json` (`dangerousInsecureTransportProtocol: true` porque es HTTP en LAN).
 - El **SRV** corre **Caddy** sirviendo `C:\bandes-updates\` en el puerto `:8090`: ahí viven `latest.json`, `Bandes_<ver>_x64-setup.exe`, `.msi`, `.msi.sig`.
 - El `latest.json` lo genera el CI y apunta al `setup.exe` con la URL del SRV.
 
@@ -148,7 +148,7 @@ Contabilidad de custodia: el peso se rastrea del **peso bruto teórico (BI)** al
 > y activa fallbacks (descargas por anchor, auto-update desactivado, cámara con el aviso del
 > navegador).
 
-1. **BD:** opción aislada (recomendada para pruebas) — crear `bandes`/`bandes` en un PostgreSQL local y apuntar `backend/.env` a `127.0.0.1`; opción rápida — usar la BD del SRV (`192.168.1.108`) tal como está el `.env`.
+1. **BD:** opción aislada (recomendada para pruebas) — crear `bandes`/`bandes` en un PostgreSQL local y apuntar `backend/.env` a `127.0.0.1`; opción rápida — usar la BD del SRV (`192.168.88.162`) tal como está el `.env`.
 2. **Backend:** `cd backend && pnpm exec prisma generate && pnpm start:dev` → `http://127.0.0.1:3001`.
 3. **Frontend:** `cd frontend && pnpm dev` → `http://localhost:3000` → login con `admin`.
 4. Migraciones iniciales: `pnpm exec prisma migrate deploy` + `ADMIN_PASSWORD=<pw> pnpm seed:admin`.
@@ -160,15 +160,15 @@ Contabilidad de custodia: el peso se rastrea del **peso bruto teórico (BI)** al
 ## 7. Estado actual y pendientes
 
 **Hecho:**
-- App desktop funcional en LAN, versión `0.1.6` publicada (SRV = `192.168.1.108`).
+- App desktop funcional en LAN, versión `0.1.6` publicada (SRV = `192.168.88.162`).
 - Docs operativos: `README.md`, `MANUAL-SRV.md`, `ERRORES-Y-SOLUCIONES.md` (síntomas/causas/fix de: serialport, DATABASE_URL, procesos viejos en `:3001`, descargas, etc.).
-- Fix de descargas (diálogo "Guardar como"), migración de IP `192.168.88.162 → 192.168.1.108`.
+- Fix de descargas (diálogo "Guardar como"), migración de IP `192.168.1.108 → 192.168.88.162`.
 
 **Pendientes / próximos pasos (por orden de conversación):**
 1. **Probar la app en local** (setup de BD local + backend + frontend, sección 6).
 2. **Configurar roles de usuario** — mantener `SUPERADMIN | OWNER | ADMIN`; corregir el comentario desactualizado del schema; decidir permisos por rol en la UI/backend.
 3. **Auto-deploy al SRV** — plan aprobado: runner self-hosted ligero en el SRV que descarga el artifact del CI y reemplaza `C:\bandes-updates` (job `deploy` en el workflow; verificación de firma minisign). No implementado aún.
-4. **Actualizar `ARCHITECTURE.md`** del repo desktop (sigue siendo la auditoría del web) y corregir referencias a la subred vieja `192.168.88.0/24` (ahora `192.168.1.0/24`) en docs/manual.
+4. **Actualizar `ARCHITECTURE.md`** del repo desktop (sigue siendo la auditoría del web) y corregir referencias a la subred (el SRV volvió a `192.168.88.0/24`) en docs/manual.
 
 ---
 
@@ -186,5 +186,5 @@ USER_USERNAME=x USER_PASSWORD=<pw> USER_ROLE=ADMIN pnpm user:add
 Invoke-RestMethod -Uri http://127.0.0.1:3001/api/auth/login -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"<pw>"}'
 
 # Descarga del instalador desde el SRV
-curl.exe -o Bandes_0.1.6_x64-setup.exe http://192.168.1.108:8090/Bandes_0.1.6_x64-setup.exe
+curl.exe -o Bandes_0.1.6_x64-setup.exe http://192.168.88.162:8090/Bandes_0.1.6_x64-setup.exe
 ```

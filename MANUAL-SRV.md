@@ -3,7 +3,7 @@
 Guía completa para levantar el servidor de Bandes **desde cero** en una red LAN
 y mantenerlo (instalaciones, actualizaciones y clientes).
 
-> SRV = servidor Windows de la red. Valores de referencia: `192.168.1.108`,
+> SRV = servidor Windows de la red. Valores de referencia: `192.168.88.162`,
 > subred `192.168.88.0/24`. Ajusta si tu red cambia.
 
 ---
@@ -12,16 +12,16 @@ y mantenerlo (instalaciones, actualizaciones y clientes).
 
 | Recurso | Valor |
 |---|---|
-| SRV (servidor Windows) | `192.168.1.108` |
-| PostgreSQL (central) | `192.168.1.108:5432` |
-| Servidor de updates (Caddy) | `http://192.168.1.108:8090` |
+| SRV (servidor Windows) | `192.168.88.162` |
+| PostgreSQL (central) | `192.168.88.162:5432` |
+| Servidor de updates (Caddy) | `http://192.168.88.162:8090` |
 | Sidecar (local en cada PC) | `http://127.0.0.1:3001` |
 | Subred LAN autorizada | `192.168.88.0/24` |
 
 Cómo funciona:
 - Cada PC instalado corre **su propio sidecar** (`backend-api.exe`, local en
   `127.0.0.1:3001`), que se conecta **directo a la BD central** del SRV
-  (`192.168.1.108:5432`).
+  (`192.168.88.162:5432`).
 - Las actualizaciones se sirven desde el SRV vía Caddy (`8090`) leyendo
   `C:\bandes-updates\latest.json`; los clientes se auto-actualizan.
 - Un PC cliente solo necesita alcanzar el SRV en los puertos `5432` y `8090`.
@@ -55,8 +55,8 @@ Cómo funciona:
 
 **Verificar desde el propio SRV:**
 ```powershell
-& "C:\Program Files\PostgreSQL\18\bin\pg_isready.exe" -h 192.168.1.108 -p 5432
-& "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://bandes:postgres@192.168.1.108:5432/bandes" -c "select 1;"
+& "C:\Program Files\PostgreSQL\18\bin\pg_isready.exe" -h 192.168.88.162 -p 5432
+& "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://bandes:postgres@192.168.88.162:5432/bandes" -c "select 1;"
 ```
 
 ---
@@ -89,7 +89,7 @@ El asistente también permite **Detener / Reiniciar / Desinstalar** el servicio 
 **Verificar:**
 ```cmd
 sc.exe query BandesUpdates
-curl.exe -I http://192.168.1.108:8090/latest.json
+curl.exe -I http://192.168.88.162:8090/latest.json
 ```
 
 ### 3.2 (Fallback) Manual sin asistente
@@ -110,7 +110,7 @@ curl.exe -I http://192.168.1.108:8090/latest.json
 
 **Verificar:**
 ```cmd
-curl.exe -I http://192.168.1.108:8090/Bandes_0.1.6_x64-setup.exe
+curl.exe -I http://192.168.88.162:8090/Bandes_0.1.6_x64-setup.exe
 ```
 
 ---
@@ -122,7 +122,7 @@ Se compila en GitHub Actions; todo se dispara con push a `main`.
 Requisitos:
 - `backend/.env` con `DATABASE_URL` y `JWT_SECRET`.
 - Secrets de GitHub (`Settings → Secrets and variables → Actions`):
-  - `DATABASE_URL` → `postgres://bandes:postgres@192.168.1.108:5432/bandes`
+  - `DATABASE_URL` → `postgres://bandes:postgres@192.168.88.162:5432/bandes`
   - `JWT_SECRET`
   - `TAURI_SIGNING_PRIVATE_KEY`
   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
@@ -183,7 +183,7 @@ Pasos:
 2. Descargar y **reemplazar** el contenido de `C:\bandes-updates\`.
 3. Verificar:
    ```cmd
-   curl.exe -I http://192.168.1.108:8090/latest.json
+   curl.exe -I http://192.168.88.162:8090/latest.json
    ```
 4. Los equipos ya instalados avisan solos y se actualizan desde el SRV. Para el
    SRV mismo, reinstalar el MSI (cerrar la app y matar `backend-api.exe` primero).
@@ -206,13 +206,13 @@ Pasos:
    ```
 2. Verificar conectividad desde el PC cliente:
    ```powershell
-   Test-NetConnection 192.168.1.108 -Port 5432
-   Test-NetConnection 192.168.1.108 -Port 8090
+   Test-NetConnection 192.168.88.162 -Port 5432
+   Test-NetConnection 192.168.88.162 -Port 8090
    ```
    → ambos deben dar `True`.
 3. Descargar e instalar el `setup.exe`:
    ```cmd
-   curl.exe -o Bandes_0.1.6_x64-setup.exe http://192.168.1.108:8090/Bandes_0.1.6_x64-setup.exe
+   curl.exe -o Bandes_0.1.6_x64-setup.exe http://192.168.88.162:8090/Bandes_0.1.6_x64-setup.exe
    Bandes_0.1.6_x64-setup.exe
    ```
    - Si SmartScreen bloquea: "Más información → Ejecutar de todas formas".

@@ -14,9 +14,9 @@ Sistema de trazabilidad de fundición y bóveda de oro que opera **100% en red l
 
 | Recurso | Valor |
 |---|---|
-| SRV (servidor Windows) | `192.168.1.108` |
-| PostgreSQL | `192.168.1.108:5432` |
-| Servidor de updates (Caddy) | `http://192.168.1.108:8090` |
+| SRV (servidor Windows) | `192.168.88.162` |
+| PostgreSQL | `192.168.88.162:5432` |
+| Servidor de updates (Caddy) | `http://192.168.88.162:8090` |
 | Subred LAN autorizada | `192.168.88.0/24` |
 | Sidecar (local en cada PC) | `http://127.0.0.1:3001` |
 
@@ -46,7 +46,7 @@ Los instaladores se compilan en GitHub Actions. TODO se dispara con un push a `m
 
 ## 2. Instalación en el SRV (uno solo, primera vez)
 
-> Hacer SOLO en el servidor de la red (`192.168.1.108`).
+> Hacer SOLO en el servidor de la red (`192.168.88.162`).
 
 ### 2.1 PostgreSQL
 
@@ -116,7 +116,7 @@ Variables opcionales: `ADMIN_USERNAME` (default `admin`), `ADMIN_ROLE` (default 
 
 1. Desarrollar y hacer commit + push a `main` → `bandes-installers.zip` nuevo.
 2. Descargar el zip y **reemplazar** el contenido de `C:\bandes-updates\` (`.msi`, `.msi.sig`, `latest.json`).
-3. Verificar: `curl.exe -I http://192.168.1.108:8090/latest.json` → `200 OK`.
+3. Verificar: `curl.exe -I http://192.168.88.162:8090/latest.json` → `200 OK`.
 4. Los equipos ya instalados **avisarán solos** y se actualizarán desde el SRV (auto-update LAN).
 
 ---
@@ -133,15 +133,15 @@ Variables opcionales: `ADMIN_USERNAME` (default `admin`), `ADMIN_ROLE` (default 
 
 1. Verificar conectividad con el SRV:
 ```powershell
-Test-NetConnection 192.168.1.108 -Port 5432
-Test-NetConnection 192.168.1.108 -Port 8090
+Test-NetConnection 192.168.88.162 -Port 5432
+Test-NetConnection 192.168.88.162 -Port 8090
 ```
    → ambos deben dar `True`.
 
 2. Descargar e instalar (como el usuario que usará la app):
 ```powershell
 cd "$env:USERPROFILE\Downloads"
-curl.exe -O http://192.168.1.108:8090/Bandes_0.1.6_x64-setup.exe
+curl.exe -O http://192.168.88.162:8090/Bandes_0.1.6_x64-setup.exe
 .\Bandes_0.1.6_x64-setup.exe
 ```
    - El instalador crea `%LOCALAPPDATA%\Bandes` (`Bandes.exe` + `backend-api-x86_64-pc-windows-msvc.exe`) y el acceso directo en el menú.
@@ -188,7 +188,7 @@ Por defecto la balanza se lee de `COM3` (Windows) o `/dev/ttyUSB0` (Linux). Para
 
 | Síntoma | Causa probable | Acción |
 |---|---|---|
-| "No se puede encontrar esta página" al abrir `http://192.168.1.108:8090/` | Caddy sirve archivos, no listado (a menos que se use `--browse`) | Abrir la URL de un archivo concreto; o relanzar Caddy con `--browse` |
+| "No se puede encontrar esta página" al abrir `http://192.168.88.162:8090/` | Caddy sirve archivos, no listado (a menos que se use `--browse`) | Abrir la URL de un archivo concreto; o relanzar Caddy con `--browse` |
 | La app abre pero al entrar dice "Verifique el sidecar y la red" | El sidecar murió (binding nativo sin empaquetar, etc.) | `cd $env:LOCALAPPDATA\Bandes; .\backend-api.exe` y leer el error de consola |
 | `backend-api.exe` crashea con "No native build was found… bindings-cpp" | pkg no incrusta fielmente los prebuilds de `node_modules` con pnpm | Ver sección **7.1** (solución con shim + dlopen) |
 | Error de conexión a PostgreSQL | Firewall, `pg_hba.conf` o subred distinta a `192.168.88.0/24` | Verificar regla `5432` y `RemoteAddress` |

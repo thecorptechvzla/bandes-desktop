@@ -13,7 +13,7 @@
     "security": {
       "csp": {
         "default-src": "'self'",
-        "connect-src": "'self' http://127.0.0.1:3001 ws://127.0.0.1:3001 http://192.168.1.108:8090",
+        "connect-src": "'self' http://127.0.0.1:3001 ws://127.0.0.1:3001 http://192.168.88.162:8090",
         "img-src": "'self' data: blob: http://127.0.0.1:3001 https:",
         "style-src": "'self' 'unsafe-inline'",
         "font-src": "'self' data:",
@@ -34,7 +34,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVCQTZENjMyQjdCQzZFNUMKUldSY2JyeTNNdGFtVzREMlk3Rk1yYkcxZlRXeXN6R09kY2hnTDF3M1Q4Z0UwQkNuVm5jVTBweU0K",
       "endpoints": [
-        "http://192.168.1.108:8090/latest.json"
+        "http://192.168.88.162:8090/latest.json"
       ],
       "dangerousInsecureTransportProtocol": true
     }

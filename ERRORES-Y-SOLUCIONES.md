@@ -4,7 +4,7 @@ Registro de errores reales encontrados durante la puesta en marcha de Bandes
 (LAN) y cómo se resolvieron. Si aparece un síntoma nuevo, agrégalo aquí con
 causa, solución y cómo verificarlo.
 
-> Convenciones: `SRV` = servidor de la red (`192.168.1.108`); sidecar =
+> Convenciones: `SRV` = servidor de la red (`192.168.88.162`); sidecar =
 > `backend-api.exe` local en cada PC (`127.0.0.1:3001`).
 
 ---
@@ -21,7 +21,7 @@ causa, solución y cómo verificarlo.
 | `Cannot POST /api/auth/login` (404) en un equipo cliente | Sidecar viejo de instalación previa en el `3001` | Ver **§3** |
 | Login responde `400: Expected property name or '}' in JSON` | El shell corrompió el JSON del curl | Ver **§4** |
 | La app no avisa de actualizaciones | Falta `latest.json` en `C:\bandes-updates` | Ver **§5** |
-| `http://192.168.1.108:8090/` muestra "No se puede encontrar esta página" | Caddy no usa `--browse` | Abrir un archivo concreto |
+| `http://192.168.88.162:8090/` muestra "No se puede encontrar esta página" | Caddy no usa `--browse` | Abrir un archivo concreto |
 | El cliente no abre la app (sin WebView2) | Falta WebView2 Runtime | Instalar manualmente (offline) |
 | `psql` no se reconoce como comando | `psql` no está en el PATH | Usar la ruta completa (ver **§6**) |
 | `& was unexpected at this time` | Comando de PowerShell en CMD | Ver **§6** |
@@ -93,7 +93,7 @@ aparece en el **primer query** (login).
 1. En GitHub → Settings → Secrets and variables → Actions → editar `DATABASE_URL`
    con el valor exacto (sin comillas ni saltos de línea):
    ```
-   postgres://bandes:postgres@192.168.1.108:5432/bandes
+   postgres://bandes:postgres@192.168.88.162:5432/bandes
    ```
 2. Re-disparar el workflow "Build Windows" (Actions → run → Re-run) o hacer un
    commit/push nuevo.
@@ -108,8 +108,8 @@ intentar extraer strings del exe: pkg comprime el payload y da ruido binario).
 
 **Diagnóstico (desde el SRV):**
 ```powershell
-& "C:\Program Files\PostgreSQL\18\bin\pg_isready.exe" -h 192.168.1.108 -p 5432
-& "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://bandes:postgres@192.168.1.108:5432/bandes" -c "select 1;"
+& "C:\Program Files\PostgreSQL\18\bin\pg_isready.exe" -h 192.168.88.162 -p 5432
+& "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://bandes:postgres@192.168.88.162:5432/bandes" -c "select 1;"
 ```
 - Si `pg_isready` dice "no accepting connections" → revisar `listen_addresses = '*'`
   en `postgresql.conf` y reiniciar el servicio.
@@ -198,11 +198,11 @@ había versión nueva.
 después del build (`build-windows.yml` → paso "Generate latest.json for updater"):
 firma el `setup.exe` con `pnpm tauri signer sign` (usa los secrets
 `TAURI_SIGNING_PRIVATE_KEY` / `_PASSWORD`) y escribe el manifiesto con la URL
-`http://192.168.1.108:8090/Bandes_<versión>_x64-setup.exe`.
+`http://192.168.88.162:8090/Bandes_<versión>_x64-setup.exe`.
 
 **Verificar en el SRV:**
 ```cmd
-curl.exe -I http://192.168.1.108:8090/latest.json
+curl.exe -I http://192.168.88.162:8090/latest.json
 ```
 
 ---
@@ -211,7 +211,7 @@ curl.exe -I http://192.168.1.108:8090/latest.json
 
 | Error | Causa | Solución |
 |---|---|---|
-| `psql` no se reconoce | `psql` no está en el PATH | `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://bandes:postgres@192.168.1.108:5432/bandes" -c "..."` |
+| `psql` no se reconoce | `psql` no está en el PATH | `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://bandes:postgres@192.168.88.162:5432/bandes" -c "..."` |
 | `& was unexpected at this time` | Comando de PowerShell pegado en **CMD** | En CMD quitar el `&` y escribir la ruta entre comillas directa |
 | `column "username" does not exist` | Las comillas de `"User"` las comió Windows al pasar `-c` | Pasar el SQL por **stdin**: `'select username, role, active from "User";' \| & "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://..."` |
 | No encuentro el PostgreSQL | Versión/ubicación distinta | `Get-ChildItem "C:\Program Files\PostgreSQL" \| Select Name` |
@@ -232,7 +232,7 @@ ADMIN_PASSWORD=<password> pnpm seed:admin   # crea/actualiza 'admin' (SUPERADMIN
 
 Verificar:
 ```powershell
-'select username, role, active from "User";' | & "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://bandes:postgres@192.168.1.108:5432/bandes"
+'select username, role, active from "User";' | & "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgres://bandes:postgres@192.168.88.162:5432/bandes"
 ```
 
 Crear usuarios de operador:
